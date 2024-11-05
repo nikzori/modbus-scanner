@@ -17,15 +17,28 @@ namespace Gidrolock_Modbus_Scanner
 {
     public partial class App : Form
     {
+        int offset = 0;
+        byte[] data = new byte[255];
         public bool isAwaitingResponse = false;
         public short[] res = new short[12];
         public SerialPort port = new SerialPort();
+        public int expectedLength = 0;
 
         public App()
         {
             InitializeComponent();
             this.port.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(PortDataReceived);
             this.UpDown_ModbusID.Value = 30;
+            TextBox_Log.Text = "Приложение готово к работе.";
+
+            CBox_Function.Items.Add("01 - Read Coil");
+            CBox_Function.Items.Add("02 - Read Discrete Input");
+            CBox_Function.Items.Add("03 - Read Holding Register");
+            CBox_Function.Items.Add("04 - Read Input Register");
+            CBox_Function.SelectedItem = CBox_Function.Items[0];
+
+            UpDown_RegAddress.Minimum = 0;
+            UpDown_RegAddress.Maximum = 65536;
         }
         void App_FormClosed(object sender, FormClosedEventArgs e)
         {
@@ -49,13 +62,14 @@ namespace Gidrolock_Modbus_Scanner
             else ButtonConnect.Text = "Подключиться";
         }
 
-        private async void ButtonConnect_Click(object sender, EventArgs e)
-        { 
+        async Task SendMessageAsync(FunctionCode functionCode, ushort address, ushort length)
+        {
             if (CBox_Ports.Text == "")
                 MessageBox.Show("Необходимо выбрать COM порт.", "Ошибка", MessageBoxButtons.OK);
             if (UpDown_ModbusID.Value == 0)
                 MessageBox.Show("Глобальное вещание пока не поддерживается");
-            try 
+
+            try
             {
                 if (port.IsOpen)
                     port.Close();
@@ -67,19 +81,29 @@ namespace Gidrolock_Modbus_Scanner
                 port.DataBits = 8;
                 port.StopBits = StopBits.One;
 
-                port.ReadTimeout = 10;
-                port.WriteTimeout = 10;
+                port.ReadTimeout = 1000;
+                port.WriteTimeout = 1000;
 
-        
 
+                offset = 0;
+                data = new byte[255];
                 port.Open();
-                var send = await Modbus.ReadRegAsync(port, (byte)FunctionCode.HoldingRegister, (byte)UpDown_ModbusID.Value, 128, 1);
+
+                byte[] message = new byte[8];
+                Modbus.BuildMessage((byte)UpDown_ModbusID.Value, (byte)(1 + functionCode), address, length, ref message);
+                string messageParsed = Modbus.ParseByteArray(message);
+
+                var send = await Modbus.ReadRegAsync(port, functionCode, (byte)UpDown_ModbusID.Value, address, length);
+                AddLog("Отправка сообщения: " + messageParsed);
                 isAwaitingResponse = true;
                 Task timer = Task.Delay(2000);
-                await timer.ContinueWith( _ => 
+                await timer.ContinueWith(_ =>
                 {
                     if (isAwaitingResponse)
+                    {
                         MessageBox.Show("Истекло время ожидания ответа.", "Ошибка");
+                        port.Close();
+                    }
                 });
 
             }
@@ -88,6 +112,11 @@ namespace Gidrolock_Modbus_Scanner
                 port.Close();
                 MessageBox.Show(err.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private async void ButtonConnect_Click(object sender, EventArgs e)
+        {
+            await SendMessageAsync(FunctionCode.HoldingRegister, 128, 1);
         }
 
         void CBox_Ports_Click(object sender, EventArgs e)
@@ -100,40 +129,37 @@ namespace Gidrolock_Modbus_Scanner
         {
             Console.WriteLine("Data receieved on Serial Port");
             isAwaitingResponse = false;
-            int len;
-            byte rdxLen = 0;
-            
             try
             {
-                len = port.BytesToRead;
-                byte[] data = new byte[len];
-                port.Read(data, rdxLen, len);
-                rdxLen += (byte)len;
-                int lastByte = len - 1;
-                for (int i = len - 1; i >= 0; i--)
-                {
-                    if (data[i] != 0)
-                    {
-                        lastByte = i;
-                        break;
-                    }
-                }
-                string dataString = BitConverter.ToString(data);
-                string dataCleaned = "";
-                for (int i = 0; i < dataString.Length; i++)
-                {
-                    if (dataString[i] == '-')
-                        dataCleaned += " ";
-                    else dataCleaned += dataString[i];
-                }
-                MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
+                int len = port.BytesToRead;
+                Console.WriteLine("Data length: " + len);
+                port.Read(data, offset, len);
+                offset += len;
+                string dataCleaned = Modbus.ParseByteArray(data);
+
+                TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("Получен ответ: " + dataCleaned); });
+                //MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
             }
             catch (Exception err)
             {
                 MessageBox.Show(err.Message);
             }
+            //port.Close();
 
-            port.Close();
+        }
+
+        void AddLog(string message)
+        {
+            TextBox_Log.AppendText(Environment.NewLine + message);
+        }
+
+        private async void Button_SendCommand_Click(object sender, EventArgs e)
+        {
+            FunctionCode functionCode = (FunctionCode)CBox_Function.SelectedIndex;
+            ushort address = (ushort)UpDown_RegAddress.Value;
+            ushort length = (ushort)UpDown_RegLength.Value;
+
+            await SendMessageAsync(functionCode, address, length);
         }
     }
 }   
