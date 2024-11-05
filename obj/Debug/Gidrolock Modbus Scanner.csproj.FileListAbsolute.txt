@@ -1,0 +1,10 @@
+C:\Users\U3B8\Project\Desktop\Gidrolock Modbus Scanner\bin\Debug\Gidrolock Modbus Scanner.exe.config
+C:\Users\U3B8\Project\Desktop\Gidrolock Modbus Scanner\bin\Debug\Gidrolock Modbus Scanner.exe
+C:\Users\U3B8\Project\Desktop\Gidrolock Modbus Scanner\bin\Debug\Gidrolock Modbus Scanner.pdb
+C:\Users\U3B8\Project\Desktop\Gidrolock Modbus Scanner\obj\Debug\Gidrolock Modbus Scanner.csproj.AssemblyReference.cache
+C:\Users\U3B8\Project\Desktop\Gidrolock Modbus Scanner\obj\Debug\Gidrolock_Modbus_Scanner.App.resources
+C:\Users\U3B8\Project\Desktop\Gidrolock Modbus Scanner\obj\Debug\Gidrolock_Modbus_Scanner.Properties.Resources.resources
+C:\Users\U3B8\Project\Desktop\Gidrolock Modbus Scanner\obj\Debug\Gidrolock Modbus Scanner.csproj.GenerateResource.cache
+C:\Users\U3B8\Project\Desktop\Gidrolock Modbus Scanner\obj\Debug\Gidrolock Modbus Scanner.csproj.CoreCompileInputs.cache
+C:\Users\U3B8\Project\Desktop\Gidrolock Modbus Scanner\obj\Debug\Gidrolock Modbus Scanner.exe
+C:\Users\U3B8\Project\Desktop\Gidrolock Modbus Scanner\obj\Debug\Gidrolock Modbus Scanner.pdb
