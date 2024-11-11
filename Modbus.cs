@@ -99,7 +99,7 @@ namespace Gidrolock_Modbus_Scanner
 
         }
         #endregion
-
+        
         #region Write Single Coil/Register
         public static async Task<bool> WriteSingle(SerialPort port, FunctionCode functionCode, byte address, ushort start, uint value)
         {
@@ -119,7 +119,7 @@ namespace Gidrolock_Modbus_Scanner
             }
             */
         }
-
+        #endregion
         public static bool ParseResponse(byte[] res, ref string verbose)
         {
             try
@@ -177,4 +177,3 @@ namespace Gidrolock_Modbus_Scanner
         }
     }
 }
-
