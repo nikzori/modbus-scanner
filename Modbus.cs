@@ -62,7 +62,7 @@ namespace Gidrolock_Modbus_Scanner
         }
         #endregion
 
-        #region Function 3 - Read Holding Registers
+        #region Read Functions
         public static async Task<bool> ReadRegAsync(SerialPort port, FunctionCode functionCode, byte address, ushort start, ushort length)
         {
             //Ensure port is open:
@@ -99,6 +99,48 @@ namespace Gidrolock_Modbus_Scanner
 
         }
         #endregion
+
+        #region Write Single Coil/Register
+        public static async Task<bool> WriteSingle(SerialPort port, FunctionCode functionCode, byte address, ushort start, uint value)
+        {
+            MessageBox.Show("Not implemented");
+            return false;
+            /*
+            if (port.IsOpen)
+            {
+                //Clear in/out buffers:
+                port.DiscardOutBuffer();
+                port.DiscardInBuffer();
+            }
+            else
+            {
+                MessageBox.Show("Порт не открыт");
+                return false;
+            }
+            */
+        }
+
+        public static bool ParseResponse(byte[] res, ref string verbose)
+        {
+            try
+            {
+                int dataLength = (int)res[2];
+                if (res.Length < dataLength + 4)
+                {
+                    verbose = "Сообщение устройства не соответствует ожидаемой длине!";
+                    return false;
+                }
+
+                //TODO: Check CRC
+                return true;
+            }
+            catch
+            {
+                verbose = "Сообщение устройства не соответствует ожидаемой длине!";
+                return false;
+            }
+            
+        }
 
         /// <summary>
         /// Parses a byte array into a string.
