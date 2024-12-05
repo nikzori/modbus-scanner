@@ -214,6 +214,7 @@ namespace Gidrolock_Modbus_Scanner
             {
                 AddLog("Попытка подключиться к устройству " + device.name);
                 Datasheet datasheet = new Datasheet();
+                datasheet.Show();
                 /*
                 if (Radio_SerialPort.Checked)
                     await SendMessageAsync(FunctionCode.InputRegister, 200, 6);

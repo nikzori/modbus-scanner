@@ -13,24 +13,30 @@ namespace Gidrolock_Modbus_Scanner
     public partial class Datasheet : Form
     {
         int pollDelay = 250; // delay between each entry poll, ms
-        List<EntryUI> entries = new List<EntryUI>();
-
+        Device device = App.device;
         public Datasheet()
         {
-            InitializeComponent(); 
-        }
-    }
+            InitializeComponent();
+            listView1.AllowColumnReorder = true;
+            listView1.CheckBoxes = true;
+            listView1.FullRowSelect = true;
+            listView1.GridLines = true;
 
-    public class EntryUI : GroupBox
-    {
-        public Label Label_Name;
-        public Label Label_Value;
-        public ToolTip ToolTip;
-        public EntryUI(string name, string description, int address, string registerType, string dataType)
-        {
-            Label_Name.Text = name;
-            ToolTip.SetToolTip(this, description);
+            listView1.Columns.Add("#", -2, HorizontalAlignment.Left);
+            listView1.Columns.Add("Name", -2, HorizontalAlignment.Left);
+            listView1.Columns.Add("Value", -2, HorizontalAlignment.Left);
+            listView1.Columns.Add("Address", -2, HorizontalAlignment.Left);
+
+
+            for (int i = 0; i < device.entries.Count; i++)
+            {
+                ListViewItem item = new ListViewItem(i.ToString());
+                item.SubItems.Add(device.entries[i].name);
+                item.SubItems.Add(" ");
+                item.SubItems.Add(device.entries[i].address.ToString());
+
+                listView1.Items.Add(item);
+            }
         }
-        
     }
 }
