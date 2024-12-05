@@ -14,6 +14,8 @@ using System.Runtime;
 using System.Web;
 using System.Windows.Forms.Automation;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
+using System.Net.Sockets;
 
 namespace Gidrolock_Modbus_Scanner
 {
@@ -24,7 +26,7 @@ namespace Gidrolock_Modbus_Scanner
             110, 300, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 76800, 115200, 230300, 460800, 921600 
         };
         public static int[] DataBits = new int[] { 7, 8 };
-
+        Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
         int offset = 0;
         byte[] message = new byte[255];
         public bool isAwaitingResponse = false;
@@ -46,7 +48,7 @@ namespace Gidrolock_Modbus_Scanner
             CBox_Function.Items.Add("03 - Read Holding Register");
             CBox_Function.Items.Add("04 - Read Input Register");
             CBox_Function.Items.Add("05 - Write Single Coil");
-            CBox_Function.Items.Add("06 - Write Single Holding Register");
+            CBox_Function.Items.Add("06 - Write Single Register");
             CBox_Function.Items.Add("0F - Write Multiple Coils");
             CBox_Function.Items.Add("10 - Write Multiple Registers");
             CBox_Function.SelectedItem = CBox_Function.Items[0];
@@ -79,11 +81,23 @@ namespace Gidrolock_Modbus_Scanner
             CBox_StopBits.Items.Add("2");
             CBox_StopBits.SelectedIndex = 1;
 
+            CBox_Parity.Items.Add("Нет");
+            CBox_Parity.Items.Add("Четн.");
+            CBox_Parity.Items.Add("Нечетн.");
+            CBox_Parity.SelectedIndex = 0;
+
+
             UpDown_RegAddress.Minimum = 0;
             UpDown_RegAddress.Maximum = 65535;
 
             UpDown_Value.Minimum = 0;
             UpDown_Value.Maximum = 65535; // 2^16 
+
+            Radio_SerialPort.Checked = true;
+            GBox_Ethernet.Enabled = false;
+            TBox_IP.Text = "192.168.3.7";
+            TBox_Port.Text = "8887";
+            TBox_Timeout.Text = "3";
         }
         void App_FormClosed(object sender, FormClosedEventArgs e)
         {
@@ -192,7 +206,37 @@ namespace Gidrolock_Modbus_Scanner
         private async void ButtonConnect_Click(object sender, EventArgs e)
         {
             AddLog("Попытка подключиться к устройству Gidrolock.");
-            await SendMessageAsync(FunctionCode.DiscreteInput, 200, 5);
+
+            if (Radio_SerialPort.Checked)
+                await SendMessageAsync(FunctionCode.InputRegister, 200, 6);
+            //else EthernetParse();
+        }
+
+        async void EthernetParse()
+        {
+            string ipText = TBox_IP.Text;
+            string portText = TBox_Port.Text;
+
+            Regex ip = new Regex(@"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b");
+            Regex port = new Regex(@"\d");
+
+            if (!ip.IsMatch(ipText))
+                MessageBox.Show("Неправильный формат IP-адреса.");
+            else if (!port.IsMatch(portText))
+                MessageBox.Show("Неправильный формат TCP-порта.");
+            else
+            {
+                int portParsed = Int32.Parse(portText);
+                await socket.ConnectAsync(ipText, portParsed);
+                byte[] data = new byte[8];
+                Modbus.BuildMessage(0x1E, 0x03, 128, 1, ref data);
+                AddLog("Sending to " + ipText + ":" + portText + ":" + Modbus.ParseByteArray(data));
+
+                // set up an event listener to receive the response
+                await SocketDataTransfer(data);
+
+            }
+            
         }
 
         void CBox_Ports_Click(object sender, EventArgs e)
@@ -212,7 +256,7 @@ namespace Gidrolock_Modbus_Scanner
                 try
                 {
                     port.Read(message, 0, 3);
-                    int length = (int)message[2]; 
+                    int length = (int)message[2];
                     for (int i = 0; i < length + 2; i++)
                     {
                         port.Read(message, i + 3, 1);
@@ -234,8 +278,10 @@ namespace Gidrolock_Modbus_Scanner
                 catch (Exception err)
                 {
                     MessageBox.Show(err.Message);
+                    isProcessingResponse = false;
                 }
             }
+            else Console.WriteLine("Already processing incoming message!");
 
             //port.Close();
             
@@ -267,6 +313,43 @@ namespace Gidrolock_Modbus_Scanner
 
                 UpDown_Value.Enabled = true;
             }
+        }
+
+        private void Radio_SerialPort_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Radio_SerialPort.Checked)
+                GBox_Serial.Enabled = true;
+            else GBox_Serial.Enabled = false;
+        }
+
+        private void Radio_Ethernet_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Radio_Ethernet.Checked)
+                GBox_Ethernet.Enabled = true;
+            else GBox_Ethernet.Enabled = false;
+        }
+
+        private async Task<bool> SocketDataTransfer(byte[] data)
+        {
+            await Task.Run(() => { socket.Send(data); });
+            byte[] res = new byte[64];
+            await Task.Run(() =>
+            {
+                while (true)
+                {
+                    int bytesReceived = socket.Receive(res);
+
+                    if (bytesReceived == 0)
+                        break;
+
+                    string resParsed = "";
+                    Modbus.ParseResponse(res, ref resParsed);
+
+                    Console.Out.WriteLine("Received data on TCP socket: " + resParsed);
+                    AddLog("Response from TCP Server: " + resParsed);
+                }                
+            });
+            return true;
         }
     }
 }   
