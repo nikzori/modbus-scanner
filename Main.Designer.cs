@@ -51,7 +51,7 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.CBox_Ports = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.ButtonConnect = new System.Windows.Forms.Button();
+            this.Button_Connect = new System.Windows.Forms.Button();
             this.TextBox_Log = new System.Windows.Forms.TextBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.panel6 = new System.Windows.Forms.Panel();
@@ -80,6 +80,9 @@
             this.groupBox4 = new System.Windows.Forms.GroupBox();
             this.Radio_Ethernet = new System.Windows.Forms.RadioButton();
             this.Radio_SerialPort = new System.Windows.Forms.RadioButton();
+            this.Button_LoadConfig = new System.Windows.Forms.Button();
+            this.label12 = new System.Windows.Forms.Label();
+            this.Label_Config = new System.Windows.Forms.Label();
             this.GBox_Serial.SuspendLayout();
             this.panel11.SuspendLayout();
             this.panel10.SuspendLayout();
@@ -308,17 +311,17 @@
             this.label1.TabIndex = 0;
             this.label1.Text = "Порт";
             // 
-            // ButtonConnect
+            // Button_Connect
             // 
-            this.ButtonConnect.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.Button_Connect.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.ButtonConnect.Location = new System.Drawing.Point(203, 155);
-            this.ButtonConnect.Name = "ButtonConnect";
-            this.ButtonConnect.Size = new System.Drawing.Size(100, 25);
-            this.ButtonConnect.TabIndex = 4;
-            this.ButtonConnect.Text = "Подключиться";
-            this.ButtonConnect.UseVisualStyleBackColor = true;
-            this.ButtonConnect.Click += new System.EventHandler(this.ButtonConnect_Click);
+            this.Button_Connect.Location = new System.Drawing.Point(402, 155);
+            this.Button_Connect.Name = "Button_Connect";
+            this.Button_Connect.Size = new System.Drawing.Size(100, 25);
+            this.Button_Connect.TabIndex = 4;
+            this.Button_Connect.Text = "Подключиться";
+            this.Button_Connect.UseVisualStyleBackColor = true;
+            this.Button_Connect.Click += new System.EventHandler(this.ButtonConnect_Click);
             // 
             // TextBox_Log
             // 
@@ -579,17 +582,50 @@
             this.Radio_SerialPort.UseVisualStyleBackColor = true;
             this.Radio_SerialPort.CheckedChanged += new System.EventHandler(this.Radio_SerialPort_CheckedChanged);
             // 
+            // Button_LoadConfig
+            // 
+            this.Button_LoadConfig.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.Button_LoadConfig.Location = new System.Drawing.Point(292, 155);
+            this.Button_LoadConfig.Name = "Button_LoadConfig";
+            this.Button_LoadConfig.Size = new System.Drawing.Size(100, 25);
+            this.Button_LoadConfig.TabIndex = 8;
+            this.Button_LoadConfig.Text = "Выбрать";
+            this.Button_LoadConfig.UseVisualStyleBackColor = true;
+            this.Button_LoadConfig.Click += new System.EventHandler(this.LoadConfig);
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(9, 161);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(83, 13);
+            this.label12.TabIndex = 9;
+            this.label12.Text = "Конфигурация:";
+            // 
+            // Label_Config
+            // 
+            this.Label_Config.AutoSize = true;
+            this.Label_Config.Location = new System.Drawing.Point(90, 161);
+            this.Label_Config.Name = "Label_Config";
+            this.Label_Config.Size = new System.Drawing.Size(66, 13);
+            this.Label_Config.TabIndex = 1;
+            this.Label_Config.Text = "не выбрана";
+            // 
             // App
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(514, 391);
+            this.Controls.Add(this.Label_Config);
+            this.Controls.Add(this.label12);
+            this.Controls.Add(this.Button_LoadConfig);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.GBox_Ethernet);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.TextBox_Log);
             this.Controls.Add(this.GBox_Serial);
-            this.Controls.Add(this.ButtonConnect);
+            this.Controls.Add(this.Button_Connect);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.Name = "App";
@@ -647,7 +683,7 @@
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.ComboBox CBox_Ports;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Button ButtonConnect;
+        private System.Windows.Forms.Button Button_Connect;
         private System.Windows.Forms.TextBox TextBox_Log;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.Panel panel5;
@@ -691,6 +727,9 @@
         private System.Windows.Forms.GroupBox groupBox4;
         private System.Windows.Forms.RadioButton Radio_Ethernet;
         private System.Windows.Forms.RadioButton Radio_SerialPort;
+        private System.Windows.Forms.Button Button_LoadConfig;
+        private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.Label Label_Config;
     }
 }
 

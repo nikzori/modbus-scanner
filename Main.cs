@@ -16,6 +16,8 @@ using System.Windows.Forms.Automation;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Net.Sockets;
+using System.IO;
+using Newtonsoft.Json;
 
 namespace Gidrolock_Modbus_Scanner
 {
@@ -32,14 +34,15 @@ namespace Gidrolock_Modbus_Scanner
         public bool isAwaitingResponse = false;
         public bool isProcessingResponse = false;
         public short[] res = new short[12];
-        public SerialPort port = new SerialPort();
+        public static SerialPort port = new SerialPort();
         public int expectedLength = 0;
-        
+
+        public static Device device;
 
         public App()
         {
             InitializeComponent();
-            this.port.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(PortDataReceived);
+            port.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(PortDataReceived);
             this.UpDown_ModbusID.Value = 30;
             TextBox_Log.Text = "Приложение готово к работе.";
 
@@ -117,8 +120,8 @@ namespace Gidrolock_Modbus_Scanner
         void Init()
         {
             if (UpDown_ModbusID.Value == 0)
-                ButtonConnect.Text = "Найти адрес";
-            else ButtonConnect.Text = "Подключиться";
+                Button_Connect.Text = "Найти адрес";
+            else Button_Connect.Text = "Подключиться";
         }
 
         async Task SendMessageAsync(FunctionCode functionCode, ushort address, ushort length)
@@ -139,8 +142,8 @@ namespace Gidrolock_Modbus_Scanner
             port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
             port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
 
-            port.ReadTimeout = 1000;
-            port.WriteTimeout = 1000;
+            port.ReadTimeout = 3000;
+            port.WriteTimeout = 3000;
 
 
             offset = 0;
@@ -159,7 +162,7 @@ namespace Gidrolock_Modbus_Scanner
                     var send = await Modbus.ReadRegAsync(port, functionCode, (byte)UpDown_ModbusID.Value, address, length);
                     AddLog("Отправка сообщения: " + messageParsed);
                     isAwaitingResponse = true;
-                    Task timer = Task.Delay(2000);
+                    Task timer = Task.Delay(port.ReadTimeout);
                     await timer.ContinueWith(_ =>
                     {
                         if (isAwaitingResponse)
@@ -205,11 +208,18 @@ namespace Gidrolock_Modbus_Scanner
 
         private async void ButtonConnect_Click(object sender, EventArgs e)
         {
-            AddLog("Попытка подключиться к устройству Gidrolock.");
-
-            if (Radio_SerialPort.Checked)
-                await SendMessageAsync(FunctionCode.InputRegister, 200, 6);
-            //else EthernetParse();
+            if (device is null)
+                MessageBox.Show("Выберите конфигурацию для подключения и опроса устройства.");
+            else
+            {
+                AddLog("Попытка подключиться к устройству " + device.name);
+                Datasheet datasheet = new Datasheet();
+                /*
+                if (Radio_SerialPort.Checked)
+                    await SendMessageAsync(FunctionCode.InputRegister, 200, 6);
+                //else EthernetParse();
+                */
+            }
         }
 
         async void EthernetParse()
@@ -350,6 +360,44 @@ namespace Gidrolock_Modbus_Scanner
                 }                
             });
             return true;
+        }
+
+        private void LoadConfig(object sender, EventArgs e)
+        {
+            var fileContent = string.Empty;
+            var filePath = string.Empty;
+
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.InitialDirectory = Application.StartupPath;
+                openFileDialog.Filter = "JSON files (*.json)|*.json";
+                openFileDialog.FilterIndex = 2;
+                openFileDialog.RestoreDirectory = true;
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    //Get the path of specified file
+                    filePath = openFileDialog.FileName;
+
+                    //Read the contents of the file into a stream
+                    var fileStream = openFileDialog.OpenFile();
+
+                    using (StreamReader reader = new StreamReader(fileStream))
+                    {
+                        fileContent = reader.ReadToEnd();
+                    }
+
+                    try
+                    {
+                        device = JsonConvert.DeserializeObject<Device>(fileContent);
+                        Label_Config.Text = device.name;
+                    }
+                    catch (Exception err)
+                    {
+                        MessageBox.Show(err.Message);
+                    }
+                }
+            }
         }
     }
 }   
