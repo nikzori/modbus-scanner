@@ -28,37 +28,43 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.Windows.Forms.DataGridViewCellStyle dataGridViewCellStyle1 = new System.Windows.Forms.DataGridViewCellStyle();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Datasheet));
-            this.listView1 = new System.Windows.Forms.ListView();
+            this.DGV_Device = new System.Windows.Forms.DataGridView();
+            ((System.ComponentModel.ISupportInitialize)(this.DGV_Device)).BeginInit();
             this.SuspendLayout();
             // 
-            // listView1
+            // DGV_Device
             // 
-            this.listView1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            this.DGV_Device.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle1;
+            this.DGV_Device.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.listView1.HideSelection = false;
-            this.listView1.Location = new System.Drawing.Point(12, 137);
-            this.listView1.Name = "listView1";
-            this.listView1.Size = new System.Drawing.Size(716, 301);
-            this.listView1.TabIndex = 0;
-            this.listView1.UseCompatibleStateImageBehavior = false;
+            this.DGV_Device.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.DGV_Device.Location = new System.Drawing.Point(13, 60);
+            this.DGV_Device.MultiSelect = false;
+            this.DGV_Device.Name = "DGV_Device";
+            this.DGV_Device.RowHeadersVisible = false;
+            this.DGV_Device.Size = new System.Drawing.Size(567, 378);
+            this.DGV_Device.TabIndex = 0;
             // 
             // Datasheet
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(740, 450);
-            this.Controls.Add(this.listView1);
+            this.ClientSize = new System.Drawing.Size(592, 450);
+            this.Controls.Add(this.DGV_Device);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Datasheet";
             this.Text = "Datasheet";
+            ((System.ComponentModel.ISupportInitialize)(this.DGV_Device)).EndInit();
             this.ResumeLayout(false);
 
         }
 
         #endregion
 
-        private System.Windows.Forms.ListView listView1;
+        private System.Windows.Forms.DataGridView DGV_Device;
     }
 }

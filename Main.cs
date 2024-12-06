@@ -29,7 +29,7 @@ namespace Gidrolock_Modbus_Scanner
         };
         public static int[] DataBits = new int[] { 7, 8 };
         Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-        int offset = 0;
+
         byte[] message = new byte[255];
         public bool isAwaitingResponse = false;
         public bool isProcessingResponse = false;
@@ -38,7 +38,7 @@ namespace Gidrolock_Modbus_Scanner
         public int expectedLength = 0;
 
         public static Device device;
-
+        #region Initialization
         public App()
         {
             InitializeComponent();
@@ -123,7 +123,9 @@ namespace Gidrolock_Modbus_Scanner
                 Button_Connect.Text = "Найти адрес";
             else Button_Connect.Text = "Подключиться";
         }
+        #endregion
 
+        // Send a custom message
         async Task SendMessageAsync(FunctionCode functionCode, ushort address, ushort length)
         {
             if (CBox_Ports.Text == "")
@@ -131,7 +133,7 @@ namespace Gidrolock_Modbus_Scanner
             if (UpDown_ModbusID.Value == 0)
                 MessageBox.Show("Глобальное вещание пока не поддерживается");
 
-            // Port Setup
+            /* - Port Setup - */
             if (port.IsOpen)
                 port.Close();
 
@@ -146,21 +148,19 @@ namespace Gidrolock_Modbus_Scanner
             port.WriteTimeout = 3000;
 
 
-            offset = 0;
             message = new byte[255];
             port.Open();
+
 
             /* - Reading from Registers - */
             if (CBox_Function.SelectedIndex < 4)
             {
                 try
-                { 
-                    byte[] request = new byte[8];
-                    Modbus.BuildMessage((byte)UpDown_ModbusID.Value, (byte)(1 + functionCode), address, length, ref request);
-                    string messageParsed = Modbus.ParseByteArray(request);
+                {
 
-                    var send = await Modbus.ReadRegAsync(port, functionCode, (byte)UpDown_ModbusID.Value, address, length);
-                    AddLog("Отправка сообщения: " + messageParsed);
+                    AddLog("Message goes here;");
+
+                    var send = await Modbus.ReadRegAsync(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
                     isAwaitingResponse = true;
                     Task timer = Task.Delay(port.ReadTimeout);
                     await timer.ContinueWith(_ =>
@@ -188,7 +188,7 @@ namespace Gidrolock_Modbus_Scanner
                     {
                         byte[] request = new byte[8];
                         Modbus.BuildMessage((byte)UpDown_ModbusID.Value, (byte)(1 + functionCode), address, length, ref request);
-                        string messageParsed = Modbus.ParseByteArray(request);
+                        string messageParsed = Modbus.ByteArrayToString(request);
 
                         var send = await Modbus.WriteSingle(port, functionCode, (byte)UpDown_ModbusID.Value, address, (ushort)UpDown_Value.Value);
                     }
@@ -212,9 +212,34 @@ namespace Gidrolock_Modbus_Scanner
                 MessageBox.Show("Выберите конфигурацию для подключения и опроса устройства.");
             else
             {
+                /* - Port Setup - */
+                if (port.IsOpen)
+                    port.Close();
+
+                port.Handshake = Handshake.None;
+                port.PortName = CBox_Ports.Text;
+                port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex];
+                port.Parity = Parity.None;
+                port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
+                port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
+
+                port.ReadTimeout = 3000;
+                port.WriteTimeout = 3000;
+
+
+                message = new byte[255];
+                port.Open();
+
                 AddLog("Попытка подключиться к устройству " + device.name);
-                Datasheet datasheet = new Datasheet();
-                datasheet.Show();
+                try
+                {
+                    Datasheet datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
+                    datasheet.Show();
+                }
+                catch (Exception err)
+                {
+                    MessageBox.Show(err.Message);
+                }
                 /*
                 if (Radio_SerialPort.Checked)
                     await SendMessageAsync(FunctionCode.InputRegister, 200, 6);
@@ -241,7 +266,7 @@ namespace Gidrolock_Modbus_Scanner
                 await socket.ConnectAsync(ipText, portParsed);
                 byte[] data = new byte[8];
                 Modbus.BuildMessage(0x1E, 0x03, 128, 1, ref data);
-                AddLog("Sending to " + ipText + ":" + portText + ":" + Modbus.ParseByteArray(data));
+                AddLog("Sending to " + ipText + ":" + portText + ":" + Modbus.ByteArrayToString(data));
 
                 // set up an event listener to receive the response
                 await SocketDataTransfer(data);
@@ -277,8 +302,8 @@ namespace Gidrolock_Modbus_Scanner
                     {
                         data[i] = message[i + 3];
                     }
-                    Console.WriteLine("Data: " + Modbus.ParseByteArray(data));
-                    string dataCleaned = Modbus.ParseByteArray(message);
+                    Console.WriteLine("Data: " + Modbus.ByteArrayToString(data));
+                    string dataCleaned = Modbus.ByteArrayToString(message);
 
                     TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("Получен ответ: " + dataCleaned); });
                     TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("ASCII: " + "wip"); });
@@ -403,4 +428,4 @@ namespace Gidrolock_Modbus_Scanner
     }
 }   
 
-public enum FunctionCode { Coil, DiscreteInput, HoldingRegister, InputRegister, WriteCoil, WriteRegister, WriteMultCoils, WriteMultRegisters };
+public enum FunctionCode { ReadCoil, ReadDiscrete, ReadHolding, ReadInput, WriteCoil, WriteRegister, WriteMultCoils, WriteMultRegisters };

@@ -12,58 +12,30 @@ namespace Gidrolock_Modbus_Scanner
 {
     public static class Modbus
     {
-
-        #region CRC Computation
-        static void GetCRC(byte[] message, ref byte[] CRC)
-        {
-            //Function expects a modbus message of any length as well as a 2 byte CRC array in which to 
-            //return the CRC values:
-
-            ushort CRCFull = 0xFFFF;
-            byte CRCHigh = 0xFF, CRCLow = 0xFF;
-            char CRCLSB;
-
-            for (int i = 0; i < (message.Length) - 2; i++)
-            {
-                CRCFull = (ushort)(CRCFull ^ message[i]);
-
-                for (int j = 0; j < 8; j++)
-                {
-                    CRCLSB = (char)(CRCFull & 0x0001);
-                    CRCFull = (ushort)((CRCFull >> 1) & 0x7FFF);
-
-                    if (CRCLSB == 1)
-                        CRCFull = (ushort)(CRCFull ^ 0xA001);
-                }
-            }
-            CRC[1] = CRCHigh = (byte)((CRCFull >> 8) & 0xFF);
-            CRC[0] = CRCLow = (byte)(CRCFull & 0xFF);
-        }
-        #endregion
-
         #region Build Message
-        public static void BuildMessage(byte address, byte type, ushort start, ushort length, ref byte[] message)
+        public static byte[] BuildMessage(byte modbusID, byte functionCode, ushort address, ushort length, ref byte[] message)
         {
             //Array to receive CRC bytes:
             byte[] CRC = new byte[2];
 
-            message[0] = address;
-            message[1] = type;
-            message[2] = (byte)(start >> 8);
-            message[3] = (byte)start;
+            message[0] = modbusID;
+            message[1] = functionCode;
+            message[2] = (byte)(address >> 8);
+            message[3] = (byte)address;
             message[4] = (byte)(length >> 8);
             message[5] = (byte)length;
 
             GetCRC(message, ref CRC);
             message[message.Length - 2] = CRC[0];
             message[message.Length - 1] = CRC[1];
-            string msg = BitConverter.ToString(message);
+            string msg = ByteArrayToString(message);
             Console.WriteLine("Message: " + msg);
+            return message;
         }
         #endregion
 
         #region Read Functions
-        public static async Task<bool> ReadRegAsync(SerialPort port, FunctionCode functionCode, byte address, ushort start, ushort length)
+        public static async Task<bool> ReadRegAsync(SerialPort port, byte slaveID, FunctionCode functionCode, ushort address, ushort length)
         {
             //Ensure port is open:
             if (port.IsOpen)
@@ -76,7 +48,7 @@ namespace Gidrolock_Modbus_Scanner
                 byte[] message = new byte[8];
                 
                 //Build outgoing modbus message:
-                BuildMessage(address, (byte)(1 + (int)functionCode), start, length, ref message);
+                BuildMessage(slaveID, (byte)(1 + (int)functionCode), address, length, ref message);
 
                 //Send modbus message to Serial Port:
                 try
@@ -142,12 +114,7 @@ namespace Gidrolock_Modbus_Scanner
             
         }
 
-        /// <summary>
-        /// Parses a byte array into a string.
-        /// </summary>
-        /// <param name="command"></param>
-        /// <returns>string</returns>
-        public static string ParseByteArray(byte[] bytes)
+        public static string ByteArrayToString(byte[] bytes)
         {
             int length = bytes.Length - 1;
             // snip off the empty bytes at the end
@@ -175,5 +142,33 @@ namespace Gidrolock_Modbus_Scanner
 
             return result;
         }
+
+        #region CRC Computation
+        static void GetCRC(byte[] message, ref byte[] CRC)
+        {
+            //Function expects a modbus message of any length as well as a 2 byte CRC array in which to 
+            //return the CRC values:
+
+            ushort CRCFull = 0xFFFF;
+            byte CRCHigh = 0xFF, CRCLow = 0xFF;
+            char CRCLSB;
+
+            for (int i = 0; i < (message.Length) - 2; i++)
+            {
+                CRCFull = (ushort)(CRCFull ^ message[i]);
+
+                for (int j = 0; j < 8; j++)
+                {
+                    CRCLSB = (char)(CRCFull & 0x0001);
+                    CRCFull = (ushort)((CRCFull >> 1) & 0x7FFF);
+
+                    if (CRCLSB == 1)
+                        CRCFull = (ushort)(CRCFull ^ 0xA001);
+                }
+            }
+            CRC[1] = CRCHigh = (byte)((CRCFull >> 8) & 0xFF);
+            CRC[0] = CRCLow = (byte)(CRCFull & 0xFF);
+        }
+        #endregion
     }
 }

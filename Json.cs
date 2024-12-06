@@ -25,12 +25,12 @@ namespace Gidrolock_Modbus_Scanner
     {
         public string name;
         public RegisterType registerType;
-        public int address;
-        public int length;
+        public ushort address;
+        public ushort length;
         public string dataType;
         public bool readOnce;
 
-        public Entry(string name, RegisterType registerType, int address, int length, string dataType, bool readOnce)
+        public Entry(string name, RegisterType registerType, ushort address, ushort length, string dataType, bool readOnce)
         {
             this.name = name;
             this.registerType = registerType;   
