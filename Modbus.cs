@@ -48,7 +48,7 @@ namespace Gidrolock_Modbus_Scanner
                 byte[] message = new byte[8];
                 
                 //Build outgoing modbus message:
-                BuildMessage(slaveID, (byte)(1 + (int)functionCode), address, length, ref message);
+                BuildMessage(slaveID, (byte)functionCode, address, length, ref message);
 
                 //Send modbus message to Serial Port:
                 try

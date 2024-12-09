@@ -40,5 +40,5 @@ namespace Gidrolock_Modbus_Scanner
             this.readOnce = readOnce;
         }
     }
-    public enum RegisterType { Coil, Discrete, Holding, Input }
+    public enum RegisterType { Coil = 1, Discrete = 2, Holding = 3, Input = 4}
 }

@@ -87,7 +87,7 @@ namespace Gidrolock_Modbus_Scanner
 
         public async Task PollForEntry(Entry entry)
         {
-            byte[] message = new byte[7];
+            byte[] message = new byte[9];
             Console.WriteLine("Sending message: " + Modbus.ByteArrayToString(Modbus.BuildMessage(slaveID, (byte)entry.registerType, entry.address, entry.length, ref message)));
             var send = await Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
             isAwaitingResponse = true;
@@ -125,7 +125,7 @@ namespace Gidrolock_Modbus_Scanner
                             port.Read(message, i + 3, 1);
                         }
                         byte[] data = new byte[length];
-                        for (int i = 0; i < length - 2; i++)
+                        for (int i = 0; i < length; i++)
                         {
                             data[i] = message[i+3];
                         }

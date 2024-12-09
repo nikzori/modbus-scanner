@@ -280,6 +280,8 @@ namespace Gidrolock_Modbus_Scanner
 
         void PortDataReceived(object sender, EventArgs e)
         {
+            if (datasheet is null)
+                return;
             if (datasheet.Enabled)
                 return;
 
@@ -329,7 +331,7 @@ namespace Gidrolock_Modbus_Scanner
 
         private async void Button_SendCommand_Click(object sender, EventArgs e)
         {
-            FunctionCode functionCode = (FunctionCode)CBox_Function.SelectedIndex;
+            FunctionCode functionCode = (FunctionCode)CBox_Function.SelectedIndex + 1;
             ushort address = (ushort)UpDown_RegAddress.Value;
             ushort length = (ushort)UpDown_RegLength.Value;
 
@@ -427,4 +429,4 @@ namespace Gidrolock_Modbus_Scanner
     }
 }   
 
-public enum FunctionCode { ReadCoil, ReadDiscrete, ReadHolding, ReadInput, WriteCoil, WriteRegister, WriteMultCoils, WriteMultRegisters };
+public enum FunctionCode { ReadCoil = 1, ReadDiscrete = 2, ReadHolding = 3, ReadInput = 4, WriteCoil = 5, WriteRegister = 6, WriteMultCoils = 15, WriteMultRegisters = 16};
