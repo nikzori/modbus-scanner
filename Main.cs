@@ -36,6 +36,7 @@ namespace Gidrolock_Modbus_Scanner
         public short[] res = new short[12];
         public static SerialPort port = new SerialPort();
         public int expectedLength = 0;
+        Datasheet datasheet;
 
         public static Device device;
         #region Initialization
@@ -157,13 +158,9 @@ namespace Gidrolock_Modbus_Scanner
             {
                 try
                 {
-
-                    AddLog("Message goes here;");
-
                     var send = await Modbus.ReadRegAsync(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
                     isAwaitingResponse = true;
-                    Task timer = Task.Delay(port.ReadTimeout);
-                    await timer.ContinueWith(_ =>
+                    await Task.Delay(port.ReadTimeout).ContinueWith(_ =>
                     {
                         if (isAwaitingResponse)
                         {
@@ -233,7 +230,7 @@ namespace Gidrolock_Modbus_Scanner
                 AddLog("Попытка подключиться к устройству " + device.name);
                 try
                 {
-                    Datasheet datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
+                    datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
                     datasheet.Show();
                 }
                 catch (Exception err)
@@ -283,6 +280,9 @@ namespace Gidrolock_Modbus_Scanner
 
         void PortDataReceived(object sender, EventArgs e)
         {
+            if (datasheet.Enabled)
+                return;
+
             Console.WriteLine("Data receieved on Serial Port");
             isAwaitingResponse = false;
 
@@ -302,12 +302,11 @@ namespace Gidrolock_Modbus_Scanner
                     {
                         data[i] = message[i + 3];
                     }
-                    Console.WriteLine("Data: " + Modbus.ByteArrayToString(data));
-                    string dataCleaned = Modbus.ByteArrayToString(message);
 
+                    string dataCleaned = Modbus.ByteArrayToString(message);
                     TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("Получен ответ: " + dataCleaned); });
                     TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("ASCII: " + "wip"); });
-                    //MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
+
                     port.DiscardInBuffer();
                     isProcessingResponse = false;
                 }

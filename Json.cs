@@ -30,7 +30,7 @@ namespace Gidrolock_Modbus_Scanner
         public string dataType;
         public bool readOnce;
 
-        public Entry(string name, RegisterType registerType, ushort address, ushort length, string dataType, bool readOnce)
+        public Entry(string name, RegisterType registerType, ushort address, ushort length = 1, string dataType = "uint16", bool readOnce = false)
         {
             this.name = name;
             this.registerType = registerType;   

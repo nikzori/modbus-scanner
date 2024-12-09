@@ -29,7 +29,7 @@ namespace Gidrolock_Modbus_Scanner
             message[message.Length - 2] = CRC[0];
             message[message.Length - 1] = CRC[1];
             string msg = ByteArrayToString(message);
-            Console.WriteLine("Message: " + msg);
+            //Console.WriteLine("Message: " + msg);
             return message;
         }
         #endregion

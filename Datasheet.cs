@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.IO.Ports;
 using System.Linq;
+using System.Net;
 using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,14 +15,22 @@ namespace Gidrolock_Modbus_Scanner
 {
     public partial class Datasheet : Form
     {
+        bool isAwaitingResponse = false;
+        bool isProcessingResponse = false;
+        byte[] message = new byte[255];
+
         int timeout = 3000;
         int pollDelay = 250; // delay between each entry poll, ms
         byte slaveID;
         Device device = App.device;
         List<Entry> entries;
+        int activeEntryIndex; // entry index for modbus responses
         SerialPort port = App.port;
+
+        bool closed = false;
         public Datasheet(byte slaveID)
         {
+            App.port.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(PublishResponse);
             this.slaveID = slaveID;
             entries = device.entries;
 
@@ -44,56 +53,122 @@ namespace Gidrolock_Modbus_Scanner
             DGV_Device.Columns[4].Name = "Опрос";
             DGV_Device.Columns[4].FillWeight = 20;
 
+
             for (int i = 0; i < entries.Count; i++)
             {
                 DGV_Device.Rows.Add(i.ToString(), entries[i].name, "", entries[i].address);
+                DGV_Device.Rows[i].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             }
-            Task.Delay(1000).ContinueWith(_ => AutoPollAsync());
+            FormClosing += (s, e) => { closed = true; };
+            Task.Run(() => AutoPollAsync());
         }
 
-        public async Task<bool> AutoPollAsync()
+        public async void AutoPollAsync()
         {
-            port.Open();
-            while (true)
-            {
-                for (int i = 0; i < entries.Count; i++)
-                {
-                    if ((bool)DGV_Device.Rows[i].Cells[4].Value)
-                    {
-                        DGV_Device.Rows[i].Cells[2].Value = await PollForEntry(entries[i]);
-                        await Task.Delay(pollDelay);
-                    }
-                }
-            }
-        }
-
-        public async Task<string> PollForEntry(Entry entry)
-        {
-            byte[] result = new byte[] { 0xFF };
+            if (!port.IsOpen)
+                port.Open();
+            port.ReadTimeout = timeout;
             try
             {
-                await Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
-                var task = Task.Delay(10).ContinueWith(_ =>
+                while (!closed)
                 {
-                    result = new byte[port.BytesToRead];
-                    port.Read(result, 0, port.BytesToRead);
-                });
-
-                if (await Task.WhenAny(Task.Delay(timeout + 10), task) == task)
-                {
-                    if (result.Length > 5)
+                    for (int i = 0; i < entries.Count; i++)
                     {
-                        return Modbus.ByteArrayToString(result);
+                        activeEntryIndex = i;
+                        await PollForEntry(entries[i]);
                     }
-                    else return "N/A";
                 }
-                else return "N/A";
             }
             catch (Exception err)
             {
                 MessageBox.Show(err.Message);
-                return "N/A";
+            }
+        }
+
+        public async Task PollForEntry(Entry entry)
+        {
+            byte[] message = new byte[7];
+            Console.WriteLine("Sending message: " + Modbus.ByteArrayToString(Modbus.BuildMessage(slaveID, (byte)entry.registerType, entry.address, entry.length, ref message)));
+            var send = await Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+            isAwaitingResponse = true;
+            
+            Task delay = Task.Delay(timeout).ContinueWith((t) =>
+            {
+                if (isAwaitingResponse)
+                {
+                    Console.WriteLine("Response timed out.");
+                    isAwaitingResponse = false;
+                }
+            });
+
+
+            await delay;
+        }
+
+        void PublishResponse(object sender, EventArgs e)
+        {
+            Console.WriteLine("Received data on port.");
+            if (isAwaitingResponse)
+            {
+                isAwaitingResponse = false;
+
+                if (!isProcessingResponse)
+                {
+                    isProcessingResponse = true;
+                    try
+                    {
+                        message = new byte[255];
+                        port.Read(message, 0, 3);
+                        int length = (int)message[2];
+                        for (int i = 0; i < length + 2; i++)
+                        {
+                            port.Read(message, i + 3, 1);
+                        }
+                        byte[] data = new byte[length];
+                        for (int i = 0; i < length - 2; i++)
+                        {
+                            data[i] = message[i+3];
+                        }
+                        Console.WriteLine("Received message: " + Modbus.ByteArrayToString(message));
+                        Console.WriteLine("Data trimmed: " + Modbus.ByteArrayToString(data));
+                        string dataCleaned = Modbus.ByteArrayToString(message);
+
+                        switch (entries[activeEntryIndex].dataType)
+                        {
+                            case ("bool"):
+                                DGV_Device.Rows[activeEntryIndex].Cells[2].Value = data[0] > 0x00 ? "true" : "false";
+                                break;
+                            case ("uint16"):
+                                Array.Reverse(data); // BitConverter.ToUInt is is little endian, I guess, so we need to flip the array
+                                ushort test = BitConverter.ToUInt16(data, 0);
+                                Console.WriteLine("ushort parsed value: " + test);
+                                DGV_Device.Rows[activeEntryIndex].Cells[2].Value = test;
+                                break;
+                            case ("uint32"):
+                                Array.Reverse(data);
+                                DGV_Device.Rows[activeEntryIndex].Cells[2].Value = BitConverter.ToUInt32(data, 0);
+                                break;
+                            case ("utf8"):
+                                DGV_Device.Rows[activeEntryIndex].Cells[2].Value = System.Text.Encoding.UTF8.GetString(data);
+                                break;
+                            default:
+                                MessageBox.Show("Wrong data type set for entry " + entries[activeEntryIndex].name);
+                                break;
+                        }
+
+
+                        //MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
+                        port.DiscardInBuffer();
+                        isProcessingResponse = false;
+                    }
+                    catch (Exception err)
+                    {
+                        MessageBox.Show(err.Message, "Event Error");
+                        isProcessingResponse = false;
+                    }
+                }
             }
         }
     }
+
 }
