@@ -58,10 +58,10 @@
 	ƒобавить парсинг регистра, по которому можно идентифицировать модель устройства. 
 ```js
 	"checkEntry": {
-		"registerType": "input"
+		"registerType": "input",
 		"address": 200,
 		"length": 6,
-		"dataType": "string"
+		"dataType": "string",
 		"expectedValue": "SWT485"
 	}
 ```
