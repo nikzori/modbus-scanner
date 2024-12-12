@@ -14,7 +14,7 @@
 	"name" : "Gidrolock Standard Wi-Fi RS-485",
 
 	// ќписание устройства
-	"description" : "Smart valve controller unit with wired and wireless leak sensor support.",
+	"description" : "Smart valve controller unit with wired and wireless leak sensor support",
 
 	// список данных, получаемых с устройства
 	// кажда€ запись €вл€етс€ отдельным полем данных
@@ -46,25 +46,25 @@
 			// при `false` опрашиваетс€ только в первый раз
 			"readOnce": true
 		}
-	]
+	],
+
+	// ”никальное дл€ устройства значение: модель устройства, верси€ прошивки, etc.
+	"checkEntry": {
+		"registerType": "input", 
+		"address": 200,
+		"length": 6,
+		"dataType": "string",
+
+		// ожидаемое значение при опросе этих регистров
+		"expectedValue": "SWT485"
+	}
 
 }
 ```
 
 
 ### To-Do
-1. ќпределение модели устройства по `.json` шаблону.
-
-	ƒобавить парсинг регистра, по которому можно идентифицировать модель устройства. 
-```js
-	"checkEntry": {
-		"registerType": "input",
-		"address": 200,
-		"length": 6,
-		"dataType": "string",
-		"expectedValue": "SWT485"
-	}
-```
+1. ѕеребор всех `.json` шаблонов в папке дл€ автоопределени€ устройства
 2. Ќастраиваемый цикличный опрос регистров
 3. ѕоддержка Modbus TCP
 
