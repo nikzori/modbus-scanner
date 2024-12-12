@@ -1,6 +1,6 @@
 # Gidrolock Modbus Scanner
 
-RU | [EN](https://github.com/nikzori/modbus-scanner)
+RU | [EN](https://github.com/nikzori/modbus-scanner/blob/main/README_en.md)
 
 ѕростой Modbus сканнер, заточенный под устройства Gidrolock.
 
