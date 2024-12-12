@@ -1,4 +1,7 @@
 # Gidrolock Modbus Scanner
+
+RU | [EN](https://github.com/nikzori/modbus-scanner)
+
 Простой Modbus сканнер, заточенный под устройства Gidrolock.
 
 Кнопка "Подключиться" отправляет запрос на чтение шести Input Register'ов по адресу `200` (модель устройства/платы для устройств Gidrolock). 
