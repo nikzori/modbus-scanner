@@ -1,17 +1,23 @@
 ﻿using System;
 using System.IO.Ports;
-using System.Runtime;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Threading;
 
 namespace Gidrolock_Modbus_Scanner
 {
     public static class Modbus
     {
+        public static SerialPort port = new SerialPort();
+
+
+        public static event EventHandler<ModbusResponseEventArgs> ResponseReceived = delegate { };
+
+        public static void Init()
+        {
+            port.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(PortDataReceived);
+        }
+
         #region Build Message
         public static byte[] BuildMessage(byte modbusID, byte functionCode, ushort address, ushort length, ref byte[] message)
         {
@@ -116,20 +122,7 @@ namespace Gidrolock_Modbus_Scanner
 
         public static string ByteArrayToString(byte[] bytes)
         {
-            int length = bytes.Length - 1;
-            // snip off the empty bytes at the end
-            for (int i = length; i >= 0; i--)
-            {
-                if (bytes[i] != 0)
-                {
-                    length = i + 1;
-                    break;
-                }
-            }
-
-            byte[] res = new byte[length];
-            for (int i = 0; i < length; i++)
-                res[i] = bytes[i];
+            byte[] res = CleanByteArray(bytes);
 
             string dataString = BitConverter.ToString(res);
             string result = "";
@@ -142,6 +135,25 @@ namespace Gidrolock_Modbus_Scanner
 
             return result;
         }
+        public static byte[] CleanByteArray(byte[] bytes)
+        {
+            int length = bytes.Length - 1;
+            // snip off the empty bytes at the end
+            for (int i = length; i >= 0; i--)
+            {
+                if (bytes[i] != 0)
+                {
+                    length = i + 1;
+                    break;
+                }
+            }
+
+            byte[] res = new byte[length];
+            for (int i = 0; i < length; i++) { res[i] = bytes[i]; }
+
+            return res;
+        }
+
 
         #region CRC Computation
         static void GetCRC(byte[] message, ref byte[] CRC)
@@ -170,5 +182,49 @@ namespace Gidrolock_Modbus_Scanner
             CRC[0] = CRCLow = (byte)(CRCFull & 0xFF);
         }
         #endregion
+
+        static void PortDataReceived(object sender, EventArgs e)
+        {
+            Console.WriteLine("Data receieved on Serial Port");
+
+            try
+            {
+                byte[] message = new byte[port.BytesToRead];
+                port.Read(message, 0, 3);
+                int length = (int)message[2];
+                for (int i = 0; i < length + 2; i++)
+                {
+                    port.Read(message, i + 3, 1);
+                }
+                Console.WriteLine("Raw data from port: " + BitConverter.ToString(message));
+                byte[] data = new byte[length];
+                for (int i = 0; i < length; i++)
+                {
+                    data[i] = message[i + 3];
+                }
+                string dataCleaned = ByteArrayToString(message);
+                Console.WriteLine("Received response: " + dataCleaned);
+                Console.WriteLine("UTF8: " + Encoding.UTF8.GetString(data)); 
+
+                port.DiscardInBuffer();
+
+                ResponseReceived.Invoke(null, new ModbusResponseEventArgs(message));
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+            }
+        }
+
     }
+
+    public class ModbusResponseEventArgs : EventArgs
+    {
+        public byte[] message { get; set; }
+        public ModbusResponseEventArgs(byte[] message)
+        {
+            this.message = message;
+        }
+    }
+
 }

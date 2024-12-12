@@ -13,11 +13,12 @@ namespace Gidrolock_Modbus_Scanner
         public string name;
         public string description;
         public List<Entry> entries;
-
-        public Device(string name, string description, List<Entry> entries)
+        public CheckEntry checkEntry;
+        public Device(string name, string description, CheckEntry checkEntry, List<Entry> entries)
         {
             this.name = name;  
             this.description = description; 
+            this.checkEntry = checkEntry;
             this.entries = entries;
         }
     }
@@ -38,6 +39,22 @@ namespace Gidrolock_Modbus_Scanner
             this.length = length;
             this.dataType = dataType;
             this.readOnce = readOnce;
+        }
+    }
+    public struct CheckEntry
+    {
+        public RegisterType registerType;
+        public ushort address;
+        public ushort length;
+        public string dataType;
+        public string expectedValue;
+        public CheckEntry(RegisterType registerType, ushort address, ushort length, string dataType, string expectedValue)
+        {
+            this.registerType = registerType;
+            this.address = address;
+            this.length = length;
+            this.dataType = dataType;
+            this.expectedValue = expectedValue;
         }
     }
     public enum RegisterType { Coil = 1, Discrete = 2, Holding = 3, Input = 4}

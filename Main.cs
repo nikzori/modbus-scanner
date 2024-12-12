@@ -8,42 +8,52 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO.Ports;
-using System.Drawing.Drawing2D;
-using System.Threading;
-using System.Runtime;
-using System.Web;
-using System.Windows.Forms.Automation;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Net.Sockets;
 using System.IO;
 using Newtonsoft.Json;
 
+
 namespace Gidrolock_Modbus_Scanner
 {
     public partial class App : Form
     {
-        public static int[] BaudRate = new int[] 
-        { 
-            110, 300, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 76800, 115200, 230300, 460800, 921600 
+        public static int[] BaudRate = new int[]
+        {
+            110, 300, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 76800, 115200, 230300, 460800, 921600
         };
         public static int[] DataBits = new int[] { 7, 8 };
         Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 
         byte[] message = new byte[255];
         public bool isAwaitingResponse = false;
-        public bool isProcessingResponse = false;
         public short[] res = new short[12];
-        public static SerialPort port = new SerialPort();
+        SerialPort port = Modbus.port;
         public int expectedLength = 0;
         Datasheet datasheet;
+        public SelectedPath selectedPath = SelectedPath.Folder;
 
-        public static Device device;
+        public static Device device; // Deserialized .json object
+        string path = String.Empty; // Path to selected file/folder
+        string defaultPath = Application.StartupPath + "\\Configs"; // Default folder path
+        OpenFileDialog ofd = new OpenFileDialog();
+        FolderBrowserDialog fbd = new FolderBrowserDialog();
+
+        Dictionary<CheckEntry, List<Device>> juju = new Dictionary<CheckEntry, List<Device>>(); // dictionary for device identification
+        string[] configs;
+
+        public byte[] latestMessage;
         #region Initialization
         public App()
         {
             InitializeComponent();
-            port.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(PortDataReceived);
+            Modbus.Init();
+            Modbus.ResponseReceived += OnResponseReceived;
+            ofd.InitialDirectory = Application.StartupPath;
+            ofd.Filter = "JSON files (*.json)|*.json";
+            ofd.FilterIndex = 2;
+            ofd.RestoreDirectory = true;
+
             this.UpDown_ModbusID.Value = 30;
             TextBox_Log.Text = "Приложение готово к работе.";
 
@@ -102,6 +112,22 @@ namespace Gidrolock_Modbus_Scanner
             TBox_IP.Text = "192.168.3.7";
             TBox_Port.Text = "8887";
             TBox_Timeout.Text = "3";
+            if (Directory.GetDirectories(Application.StartupPath).Contains(Application.StartupPath + "\\Configs") == false)
+            {
+                Task.Delay(1500).ContinueWith(t =>
+                {
+                    MessageBox.Show("Приложение не нашло стандартную папку для конфигураций. Была создана папка 'Configs' в папке с приложением.");
+                    Directory.CreateDirectory(Application.StartupPath + "\\Configs");
+                    Console.WriteLine("New initial directory for OpenFile: " + ofd.InitialDirectory);
+                });
+            }
+            ofd.InitialDirectory = Application.StartupPath + "\\Configs";
+            path = defaultPath;
+            UpdatePathLabel();
+        }
+        void UpdatePathLabel()
+        {
+            Label_ConfPath.Text = path;
         }
         void App_FormClosed(object sender, FormClosedEventArgs e)
         {
@@ -205,44 +231,127 @@ namespace Gidrolock_Modbus_Scanner
 
         private async void ButtonConnect_Click(object sender, EventArgs e)
         {
-            if (device is null)
-                MessageBox.Show("Выберите конфигурацию для подключения и опроса устройства.");
-            else
+            if (path == String.Empty)
             {
-                /* - Port Setup - */
-                if (port.IsOpen)
-                    port.Close();
+                MessageBox.Show("Выберите конфигурацию для подключения и опроса устройства.");
+                return;
+            }
+            if (CBox_Ports.SelectedItem.ToString() == "COM1")
+            {
+                DialogResult res = MessageBox.Show("Выбран серийный порт COM1, который обычно является портом PS/2 или RS-232, не подключенным к Modbus устройству. Продолжить?", "Внимание", MessageBoxButtons.OKCancel);
+                if (res == DialogResult.Cancel)
+                    return;
+            }
 
-                port.Handshake = Handshake.None;
-                port.PortName = CBox_Ports.Text;
-                port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex];
-                port.Parity = Parity.None;
-                port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
-                port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
+            /* - Port Setup - */
+            if (port.IsOpen)
+                port.Close();
 
-                port.ReadTimeout = 3000;
-                port.WriteTimeout = 3000;
+            port.Handshake = Handshake.None;
+            port.PortName = CBox_Ports.Text;
+            port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex];
+            port.Parity = Parity.None;
+            port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
+            port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
+
+            port.ReadTimeout = 3000;
+            port.WriteTimeout = 3000;
 
 
-                message = new byte[255];
-                port.Open();
+            message = new byte[255];
+            port.Open();
 
-                AddLog("Попытка подключиться к устройству " + device.name);
+            /* - Checking  - */
+            if (selectedPath == SelectedPath.File)
+            {
+                var fileContent = string.Empty;
+                var filePath = string.Empty;
+                //Read the contents of the file into a stream
+                var fileStream = ofd.OpenFile();
+
+                using (StreamReader reader = new StreamReader(fileStream))
+                {
+                    fileContent = reader.ReadToEnd();
+                }
+
                 try
                 {
-                    datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
-                    datasheet.Show();
+                    device = JsonConvert.DeserializeObject<Device>(fileContent);
+                    Label_ConfigTip.Text = device.name;
                 }
                 catch (Exception err)
                 {
                     MessageBox.Show(err.Message);
                 }
-                /*
-                if (Radio_SerialPort.Checked)
-                    await SendMessageAsync(FunctionCode.InputRegister, 200, 6);
-                //else EthernetParse();
-                */
             }
+            else
+            {
+                string[] _configs = Directory.GetFiles(path, "*.json");
+                if (configs != _configs)
+                {
+                    // something changed in the config folder, or we haven't gone through configs, 
+                    // remake the dictionary
+                    configs = _configs;
+                    juju = new Dictionary<CheckEntry, List<Device>>();
+
+                    var fileContent = string.Empty;
+                    FileStream fileStream;
+                    Device _device;
+
+                    foreach (string path in configs)
+                    {
+                        fileStream = File.OpenRead(path);
+                        using (StreamReader reader = new StreamReader(fileStream))
+                            fileContent = reader.ReadToEnd();
+                        // get device object from .json
+                        _device = JsonConvert.DeserializeObject<Device>(fileContent);
+
+                        // compare device object to key of each dictionary;
+                        // add to that dictionary if device's check entry registers match the key
+                        foreach (CheckEntry ce in juju.Keys)
+                        {
+                            if (_device.checkEntry.address == ce.address && _device.checkEntry.length == ce.length && _device.checkEntry.dataType == ce.dataType)
+                            {
+                                juju[ce].Add(_device);
+                                break;
+                            }
+                        }
+                    }
+
+
+                }
+                // all configs are sorted out, we can poll for each checkEntry 
+
+                foreach (CheckEntry ce in juju.Keys)
+                {
+                    byte[] response;
+                    // send read request to device,
+                    // check for error codes or timeouts
+                    // if we get normal response, go through 
+                }
+
+                // with dictionaries arranged, go through every key, discarding those that return error
+                // if device returns a coherent reply, go through expected values associated with the key
+            }
+
+
+
+            AddLog("Попытка подключиться к устройству " + device.name);
+            try
+            {
+                datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
+                datasheet.Show();
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+            }
+            /*
+            if (Radio_SerialPort.Checked)
+                await SendMessageAsync(FunctionCode.InputRegister, 200, 6);
+            //else EthernetParse();
+            */
+
         }
 
         async void EthernetParse()
@@ -267,9 +376,8 @@ namespace Gidrolock_Modbus_Scanner
 
                 // set up an event listener to receive the response
                 await SocketDataTransfer(data);
-
             }
-            
+
         }
 
         void CBox_Ports_Click(object sender, EventArgs e)
@@ -278,50 +386,11 @@ namespace Gidrolock_Modbus_Scanner
             CBox_Ports.Items.AddRange(SerialPort.GetPortNames());
         }
 
-        void PortDataReceived(object sender, EventArgs e)
+        void OnResponseReceived(object sender, ModbusResponseEventArgs e)
         {
-            if (datasheet is null)
-                return;
-            if (datasheet.Enabled)
-                return;
-
-            Console.WriteLine("Data receieved on Serial Port");
             isAwaitingResponse = false;
-
-            if (!isProcessingResponse)
-            {
-                isProcessingResponse = true;
-                try
-                {
-                    port.Read(message, 0, 3);
-                    int length = (int)message[2];
-                    for (int i = 0; i < length + 2; i++)
-                    {
-                        port.Read(message, i + 3, 1);
-                    }
-                    byte[] data = new byte[length];
-                    for (int i = 0; i < length; i++)
-                    {
-                        data[i] = message[i + 3];
-                    }
-
-                    string dataCleaned = Modbus.ByteArrayToString(message);
-                    TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("Получен ответ: " + dataCleaned); });
-                    TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("ASCII: " + "wip"); });
-
-                    port.DiscardInBuffer();
-                    isProcessingResponse = false;
-                }
-                catch (Exception err)
-                {
-                    MessageBox.Show(err.Message);
-                    isProcessingResponse = false;
-                }
-            }
-            else Console.WriteLine("Already processing incoming message!");
-
-            //port.Close();
-            
+            TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("Получен ответ: " + Modbus.ByteArrayToString(e.message)); });
+            TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("UTF8: " + Encoding.UTF8.GetString(e.message)); });
         }
 
         void AddLog(string message)
@@ -384,49 +453,38 @@ namespace Gidrolock_Modbus_Scanner
 
                     Console.Out.WriteLine("Received data on TCP socket: " + resParsed);
                     AddLog("Response from TCP Server: " + resParsed);
-                }                
+                }
             });
             return true;
         }
 
         private void LoadConfig(object sender, EventArgs e)
         {
-            var fileContent = string.Empty;
-            var filePath = string.Empty;
-
-            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            if (ofd.ShowDialog() == DialogResult.OK)
             {
-                openFileDialog.InitialDirectory = Application.StartupPath;
-                openFileDialog.Filter = "JSON files (*.json)|*.json";
-                openFileDialog.FilterIndex = 2;
-                openFileDialog.RestoreDirectory = true;
+                //Get the path of specified file
+                path = ofd.FileName;
+                Label_ConfPath.Text = ofd.FileName;
 
-                if (openFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    //Get the path of specified file
-                    filePath = openFileDialog.FileName;
-
-                    //Read the contents of the file into a stream
-                    var fileStream = openFileDialog.OpenFile();
-
-                    using (StreamReader reader = new StreamReader(fileStream))
-                    {
-                        fileContent = reader.ReadToEnd();
-                    }
-
-                    try
-                    {
-                        device = JsonConvert.DeserializeObject<Device>(fileContent);
-                        Label_Config.Text = device.name;
-                    }
-                    catch (Exception err)
-                    {
-                        MessageBox.Show(err.Message);
-                    }
-                }
+                selectedPath = SelectedPath.File;
             }
+            UpdatePathLabel();
+        }
+
+        private void LoadFolder(object sender, EventArgs e)
+        {
+
+            fbd.RootFolder = Environment.SpecialFolder.MyComputer;
+            if (fbd.ShowDialog() == DialogResult.OK)
+            {
+                path = fbd.SelectedPath;
+                Label_ConfPath.Text = fbd.SelectedPath;
+                selectedPath = SelectedPath.Folder;
+            }
+            UpdatePathLabel();
         }
     }
-}   
+}
 
-public enum FunctionCode { ReadCoil = 1, ReadDiscrete = 2, ReadHolding = 3, ReadInput = 4, WriteCoil = 5, WriteRegister = 6, WriteMultCoils = 15, WriteMultRegisters = 16};
+public enum FunctionCode { ReadCoil = 1, ReadDiscrete = 2, ReadHolding = 3, ReadInput = 4, WriteCoil = 5, WriteRegister = 6, WriteMultCoils = 15, WriteMultRegisters = 16 };
+public enum SelectedPath { File, Folder };

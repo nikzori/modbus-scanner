@@ -25,12 +25,12 @@ namespace Gidrolock_Modbus_Scanner
         Device device = App.device;
         List<Entry> entries;
         int activeEntryIndex; // entry index for modbus responses
-        SerialPort port = App.port;
+        SerialPort port = Modbus.port;
 
         bool closed = false;
         public Datasheet(byte slaveID)
         {
-            App.port.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(PublishResponse);
+            Modbus.ResponseReceived += PublishResponse;
             this.slaveID = slaveID;
             entries = device.entries;
 
@@ -91,7 +91,7 @@ namespace Gidrolock_Modbus_Scanner
             Console.WriteLine("Sending message: " + Modbus.ByteArrayToString(Modbus.BuildMessage(slaveID, (byte)entry.registerType, entry.address, entry.length, ref message)));
             var send = await Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
             isAwaitingResponse = true;
-            
+
             Task delay = Task.Delay(timeout).ContinueWith((t) =>
             {
                 if (isAwaitingResponse)
@@ -105,68 +105,55 @@ namespace Gidrolock_Modbus_Scanner
             await delay;
         }
 
-        void PublishResponse(object sender, EventArgs e)
+        void PublishResponse(object sender, ModbusResponseEventArgs e)
         {
-            Console.WriteLine("Received data on port.");
             if (isAwaitingResponse)
             {
                 isAwaitingResponse = false;
 
-                if (!isProcessingResponse)
-                {
-                    isProcessingResponse = true;
-                    try
+                try
+                {   
+
+                    byte length = e.message[2];
+                    Console.WriteLine("Data length is:" + length);
+                    byte[] data = new byte[length];
+                    for (int i = 0; i < length; i++)
+                        data[i] = e.message[i + 3];
+
+                    Console.WriteLine("Data after processing in Datasheet.cs: " + Modbus.ByteArrayToString(data));
+
+                    switch (entries[activeEntryIndex].dataType)
                     {
-                        message = new byte[255];
-                        port.Read(message, 0, 3);
-                        int length = (int)message[2];
-                        for (int i = 0; i < length + 2; i++)
-                        {
-                            port.Read(message, i + 3, 1);
-                        }
-                        byte[] data = new byte[length];
-                        for (int i = 0; i < length; i++)
-                        {
-                            data[i] = message[i+3];
-                        }
-                        Console.WriteLine("Received message: " + Modbus.ByteArrayToString(message));
-                        Console.WriteLine("Data trimmed: " + Modbus.ByteArrayToString(data));
-                        string dataCleaned = Modbus.ByteArrayToString(message);
-
-                        switch (entries[activeEntryIndex].dataType)
-                        {
-                            case ("bool"):
-                                DGV_Device.Rows[activeEntryIndex].Cells[2].Value = data[0] > 0x00 ? "true" : "false";
-                                break;
-                            case ("uint16"):
-                                Array.Reverse(data); // BitConverter.ToUInt is is little endian, I guess, so we need to flip the array
-                                ushort test = BitConverter.ToUInt16(data, 0);
-                                Console.WriteLine("ushort parsed value: " + test);
-                                DGV_Device.Rows[activeEntryIndex].Cells[2].Value = test;
-                                break;
-                            case ("uint32"):
-                                Array.Reverse(data);
-                                DGV_Device.Rows[activeEntryIndex].Cells[2].Value = BitConverter.ToUInt32(data, 0);
-                                break;
-                            case ("utf8"):
-                                DGV_Device.Rows[activeEntryIndex].Cells[2].Value = System.Text.Encoding.UTF8.GetString(data);
-                                break;
-                            default:
-                                MessageBox.Show("Wrong data type set for entry " + entries[activeEntryIndex].name);
-                                break;
-                        }
-
-
-                        //MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
-                        port.DiscardInBuffer();
-                        isProcessingResponse = false;
+                        case ("bool"):
+                            DGV_Device.Rows[activeEntryIndex].Cells[2].Value = data[0] > 0x00 ? "true" : "false";
+                            break;
+                        case ("uint16"):
+                            Array.Reverse(data); // BitConverter.ToUInt is is little endian, I guess, so we need to flip the array
+                            ushort test = BitConverter.ToUInt16(data, 0);
+                            Console.WriteLine("ushort parsed value: " + test);
+                            DGV_Device.Rows[activeEntryIndex].Cells[2].Value = test;
+                            break;
+                        case ("uint32"):
+                            Array.Reverse(data);
+                            DGV_Device.Rows[activeEntryIndex].Cells[2].Value = BitConverter.ToUInt32(data, 0);
+                            break;
+                        case ("utf8"):
+                            DGV_Device.Rows[activeEntryIndex].Cells[2].Value = System.Text.Encoding.UTF8.GetString(data);
+                            break;
+                        default:
+                            MessageBox.Show("Wrong data type set for entry " + entries[activeEntryIndex].name);
+                            break;
                     }
-                    catch (Exception err)
-                    {
-                        MessageBox.Show(err.Message, "Event Error");
-                        isProcessingResponse = false;
-                    }
+
+
+                    //MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
+                    port.DiscardInBuffer();
                 }
+                catch (Exception err)
+                {
+                    //MessageBox.Show(err.Message, "Event Error");
+                }
+
             }
         }
     }
