@@ -2,7 +2,8 @@
 
 [RU](https://github.com/nikzori/modbus-scanner) | EN
 
-A Modbus scanner with both simple functionality and advanced features. Comes with config files for Gidrolock devices.
+A Modbus scanner with both simple functionality and advanced features. Works for any device connected via Modbus RTU. 
+Comes with config files for Gidrolock devices.
 Modbus TCP is still WIP.
 
 ## Configs and auto-identification
