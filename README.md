@@ -1,6 +1,6 @@
 # Gidrolock Modbus Scanner
 
-RU | [EN](https://github.com/nikzori/modbus-scanner/blob/main/README_en.md)
+RU | [EN](README_en.md)
 
 Сканнер Modbus с функцией автоопроса устройства с помощью файлов конфигурации. Подходит для любых устройств, подключенных через Modbus RTU. Конфиги для продукции Gidrolock в комплекте.
 
