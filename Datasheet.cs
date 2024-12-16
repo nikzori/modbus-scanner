@@ -17,7 +17,6 @@ namespace Gidrolock_Modbus_Scanner
     {
         bool isPolling = false;
         bool isAwaitingResponse = false;
-        bool isProcessingResponse = false;
         byte[] message = new byte[255];
 
         int timeout = 3000;
@@ -82,8 +81,8 @@ namespace Gidrolock_Modbus_Scanner
                         {
                             // TODO: figure out how to get the checkbox value out of DataGridView cells;
                             //         holy fuck DGV is awful
-                                activeEntryIndex = i;
-                                await PollForEntry(entries[i]);
+                            activeEntryIndex = i;
+                            await PollForEntry(entries[i]);
 
                         }
                     }
@@ -141,7 +140,13 @@ namespace Gidrolock_Modbus_Scanner
                             DGV_Device.Rows[activeEntryIndex].Cells[2].Value = BitConverter.ToUInt32(e.Data, 0);
                             break;
                         case ("utf8"):
-                            DGV_Device.Rows[activeEntryIndex].Cells[2].Value = System.Text.Encoding.UTF8.GetString(e.Data);
+                            List<byte> bytes = new List<byte>();
+                            for (int i = 0; i < e.Data.Length; i++)
+                            {
+                                if (e.Data[i] != 0)
+                                    bytes.Add(e.Data[i]);
+                            }
+                            DGV_Device.Rows[activeEntryIndex].Cells[2].Value = System.Text.Encoding.UTF8.GetString(bytes.ToArray());
                             break;
                         default:
                             MessageBox.Show("Wrong data type set for entry " + entries[activeEntryIndex].name);
@@ -152,10 +157,7 @@ namespace Gidrolock_Modbus_Scanner
                     //MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
                     port.DiscardInBuffer();
                 }
-                catch (Exception err)
-                {
-                    //MessageBox.Show(err.Message, "Event Error");
-                }
+                catch { return; }
 
             }
         }
