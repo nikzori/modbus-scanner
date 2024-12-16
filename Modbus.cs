@@ -3,6 +3,7 @@ using System.IO.Ports;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Gidrolock_Modbus_Scanner
 {
@@ -208,7 +209,7 @@ namespace Gidrolock_Modbus_Scanner
 
                 port.DiscardInBuffer();
 
-                ResponseReceived.Invoke(null, new ModbusResponseEventArgs(message));
+                ResponseReceived.Invoke(null, new ModbusResponseEventArgs(message, data, Encoding.UTF8.GetString(data)));
             }
             catch (Exception err)
             {
@@ -220,10 +221,14 @@ namespace Gidrolock_Modbus_Scanner
 
     public class ModbusResponseEventArgs : EventArgs
     {
-        public byte[] message { get; set; }
-        public ModbusResponseEventArgs(byte[] message)
+        public byte[] Message { get; set; }
+        public byte[] Data { get; set; }
+        public string Text { get; set; }
+        public ModbusResponseEventArgs(byte[] message, byte[] data, string text)
         {
-            this.message = message;
+            this.Message = message;
+            this.Data = data;
+            this.Text = text;
         }
     }
 

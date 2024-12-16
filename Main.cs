@@ -43,6 +43,8 @@ namespace Gidrolock_Modbus_Scanner
         string[] configs;
 
         public byte[] latestMessage;
+
+        DateTime dateTime;
         #region Initialization
         public App()
         {
@@ -57,14 +59,14 @@ namespace Gidrolock_Modbus_Scanner
             this.UpDown_ModbusID.Value = 30;
             TextBox_Log.Text = "Приложение готово к работе.";
 
-            CBox_Function.Items.Add("01 - Read Coil");
-            CBox_Function.Items.Add("02 - Read Discrete Input");
-            CBox_Function.Items.Add("03 - Read Holding Register");
-            CBox_Function.Items.Add("04 - Read Input Register");
-            CBox_Function.Items.Add("05 - Write Single Coil");
-            CBox_Function.Items.Add("06 - Write Single Register");
-            CBox_Function.Items.Add("0F - Write Multiple Coils");
-            CBox_Function.Items.Add("10 - Write Multiple Registers");
+            CBox_Function.Items.Add("01 Read Coil");
+            CBox_Function.Items.Add("02 Read Discrete Input");
+            CBox_Function.Items.Add("03 Read Holding Register");
+            CBox_Function.Items.Add("04 Read Input Register");
+            CBox_Function.Items.Add("05 Write Single Coil");
+            CBox_Function.Items.Add("06 Write Single Register");
+            CBox_Function.Items.Add("0F Write Multiple Coils");
+            CBox_Function.Items.Add("10 Write Multiple Registers");
             CBox_Function.SelectedItem = CBox_Function.Items[0];
 
             CBox_BaudRate.Items.Add("110");
@@ -231,6 +233,7 @@ namespace Gidrolock_Modbus_Scanner
 
         private async void ButtonConnect_Click(object sender, EventArgs e)
         {
+            progressBar1.Value = 0;
             if (path == String.Empty)
             {
                 MessageBox.Show("Выберите конфигурацию для подключения и опроса устройства.");
@@ -264,6 +267,17 @@ namespace Gidrolock_Modbus_Scanner
             /* - Checking  - */
             if (selectedPath == SelectedPath.File)
             {
+                AddLog("Попытка подключиться к устройству " + device.name);
+                try
+                {
+                    datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
+                    datasheet.Show();
+                }
+                catch (Exception err)
+                {
+                    MessageBox.Show(err.Message);
+                }
+
                 var fileContent = string.Empty;
                 var filePath = string.Empty;
                 //Read the contents of the file into a stream
@@ -273,6 +287,7 @@ namespace Gidrolock_Modbus_Scanner
                 {
                     fileContent = reader.ReadToEnd();
                 }
+                progressBar1.Value = 100;
 
                 try
                 {
@@ -334,24 +349,11 @@ namespace Gidrolock_Modbus_Scanner
                 // if device returns a coherent reply, go through expected values associated with the key
             }
 
-
-
-            AddLog("Попытка подключиться к устройству " + device.name);
-            try
-            {
-                datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
-                datasheet.Show();
-            }
-            catch (Exception err)
-            {
-                MessageBox.Show(err.Message);
-            }
             /*
             if (Radio_SerialPort.Checked)
                 await SendMessageAsync(FunctionCode.InputRegister, 200, 6);
             //else EthernetParse();
             */
-
         }
 
         async void EthernetParse()
@@ -389,13 +391,14 @@ namespace Gidrolock_Modbus_Scanner
         void OnResponseReceived(object sender, ModbusResponseEventArgs e)
         {
             isAwaitingResponse = false;
-            TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("Получен ответ: " + Modbus.ByteArrayToString(e.message)); });
-            TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("UTF8: " + Encoding.UTF8.GetString(e.message)); });
+            TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("Получен ответ: " + Modbus.ByteArrayToString(e.Message)); });
+            TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("UTF-8: " + e.Text); });
         }
 
         void AddLog(string message)
         {
-            TextBox_Log.AppendText(Environment.NewLine + message);
+            dateTime = DateTime.Now;
+            TextBox_Log.AppendText(Environment.NewLine + "[" + dateTime.Hour + ":" + dateTime.Minute + ":" + dateTime.Second + "] " + message);
         }
 
         private async void Button_SendCommand_Click(object sender, EventArgs e)
@@ -482,6 +485,11 @@ namespace Gidrolock_Modbus_Scanner
                 selectedPath = SelectedPath.Folder;
             }
             UpdatePathLabel();
+        }
+
+        private void CBox_Ports_Click(object sender, MouseEventArgs e)
+        {
+
         }
     }
 }
