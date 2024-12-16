@@ -186,8 +186,6 @@ namespace Gidrolock_Modbus_Scanner
 
         static void PortDataReceived(object sender, EventArgs e)
         {
-            Console.WriteLine("Data receieved on Serial Port");
-
             try
             {
                 byte[] message = new byte[port.BytesToRead];
@@ -197,15 +195,13 @@ namespace Gidrolock_Modbus_Scanner
                 {
                     port.Read(message, i + 3, 1);
                 }
-                Console.WriteLine("Raw data from port: " + BitConverter.ToString(message));
+
                 byte[] data = new byte[length];
                 for (int i = 0; i < length; i++)
                 {
                     data[i] = message[i + 3];
                 }
                 string dataCleaned = ByteArrayToString(message);
-                Console.WriteLine("Received response: " + dataCleaned);
-                Console.WriteLine("UTF8: " + Encoding.UTF8.GetString(data)); 
 
                 port.DiscardInBuffer();
 

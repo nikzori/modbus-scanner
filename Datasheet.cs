@@ -55,8 +55,8 @@ namespace Gidrolock_Modbus_Scanner
             DGV_Device.Columns.Add(new DataGridViewCheckBoxColumn());
             DGV_Device.Columns[4].Name = "Опрос";
             DGV_Device.Columns[4].FillWeight = 20;
-
-
+            DGV_Device.Columns[4].ValueType = typeof(bool);
+            
             for (int i = 0; i < entries.Count; i++)
             {
                 DGV_Device.Rows.Add(i.ToString(), entries[i].name, "", entries[i].address);
@@ -83,11 +83,14 @@ namespace Gidrolock_Modbus_Scanner
                     {
                         for (int i = 0; i < entries.Count; i++)
                         {
-                            // TODO: figure out how to get the checkbox value out of DataGridView cells;
-                            //         holy fuck DGV is awful
-                            activeEntryIndex = i;
-                            await PollForEntry(entries[i]);
-
+                            // holy fuck DGV is awful
+                            DataGridViewCheckBoxCell chbox = DGV_Device.Rows[i].Cells[4] as DataGridViewCheckBoxCell;
+                            if (Convert.ToBoolean(chbox.Value))
+                            {
+                                Console.WriteLine("Polling for " + device.entries[i].name);
+                                activeEntryIndex = i;
+                                await PollForEntry(entries[i]);
+                            }
                         }
                     }
                 }
@@ -101,7 +104,6 @@ namespace Gidrolock_Modbus_Scanner
         public async Task PollForEntry(Entry entry)
         {
             byte[] message = new byte[9];
-            Console.WriteLine("Sending message: " + Modbus.ByteArrayToString(Modbus.BuildMessage(slaveID, (byte)entry.registerType, entry.address, entry.length, ref message)));
             var send = await Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
             isAwaitingResponse = true;
 
@@ -123,11 +125,8 @@ namespace Gidrolock_Modbus_Scanner
             if (isAwaitingResponse)
             {
                 isAwaitingResponse = false;
-
                 try
                 {
-                    Console.WriteLine("Data after processing in Datasheet.cs: " + Modbus.ByteArrayToString(e.Data));
-
                     switch (entries[activeEntryIndex].dataType)
                     {
                         case ("bool"):

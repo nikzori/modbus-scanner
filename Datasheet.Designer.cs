@@ -41,6 +41,7 @@
             // 
             // DGV_Device
             // 
+            this.DGV_Device.AllowUserToAddRows = false;
             dataGridViewCellStyle1.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
             this.DGV_Device.AlternatingRowsDefaultCellStyle = dataGridViewCellStyle1;
             this.DGV_Device.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
