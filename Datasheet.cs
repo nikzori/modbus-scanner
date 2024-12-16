@@ -139,7 +139,7 @@ namespace Gidrolock_Modbus_Scanner
                             Array.Reverse(e.Data);
                             DGV_Device.Rows[activeEntryIndex].Cells[2].Value = BitConverter.ToUInt32(e.Data, 0);
                             break;
-                        case ("utf8"):
+                        case ("string"):
                             List<byte> bytes = new List<byte>();
                             for (int i = 0; i < e.Data.Length; i++)
                             {

@@ -361,27 +361,29 @@ namespace Gidrolock_Modbus_Scanner
 
                         if (ce.dataType == "string")
                         {
+                           
                             List<byte> bytes = new List<byte>();
                             for (int i = 0; i < data.Length; i++)
                             {
                                 if (data[i] != 0)       // clean empty bytes from 16-bit registers
                                     bytes.Add(data[i]); 
                             }
-                            string value = Encoding.UTF8.GetString(bytes.ToArray()); 
+                            string value = Encoding.UTF8.GetString(bytes.ToArray());
                             foreach (Device dev in juju[ce])
-                            {
+                            { 
                                 if (dev.checkEntry.expectedValue == value)
                                 {
+                                    Console.WriteLine("It's a match!");
                                     device = dev;
                                     break;
                                 }
                             }
                         }
-                        if (ce.dataType == "bool") 
+                        else if (ce.dataType == "bool") 
                         {
                             // why would you even do that lmao
                         }
-                        if (ce.dataType == "uint16" || ce.dataType == "uint32")
+                        else if (ce.dataType == "uint16" || ce.dataType == "uint32")
                         {
                             byte[] _data = data;
                             Array.Reverse(_data);

@@ -44,7 +44,7 @@ Modbus TCP пока в разработке.
 			"length": 1,
 
 			// тип данных для парсинга
-			// поддерживаемые типы: bool, uint16, uint32, utf8
+			// поддерживаемые типы: bool, uint16, uint32, string
 			// значение по умолчанию: uint16
 			"dataType": "uint16",
 
@@ -62,7 +62,7 @@ Modbus TCP пока в разработке.
 		"dataType": "string",
 
 		// ожидаемое значение при опросе этих регистров
-		"expectedValue": "SWT485"
+		"expectedValue": "STW485"
 	}
 }
 ```

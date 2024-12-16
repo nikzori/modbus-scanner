@@ -45,7 +45,7 @@ Config fields and possible values:
 			"length": 1,
 
 			// data type for parsing
-			// supported data types: bool, uint16, uint32, utf8
+			// supported data types: bool, uint16, uint32, string
 			// default value: uint16
 			"dataType": "uint16",
 
@@ -63,7 +63,7 @@ Config fields and possible values:
 		"dataType": "string",
 		
 		// value after parsing
-		"expectedValue": "SWT485"
+		"expectedValue": "STW485"
 	}
 }
 ```
