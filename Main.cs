@@ -426,7 +426,13 @@ namespace Gidrolock_Modbus_Scanner
                 }
                 else
                 {
-
+                    try
+                    {
+                        AddLog("Попытка подключиться к устройству " + device.name);
+                        datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
+                        datasheet.Show();
+                    }
+                    catch (Exception err) { MessageBox.Show(err.Message); }
                 }
 
             }
