@@ -62,6 +62,10 @@ namespace Gidrolock_Modbus_Scanner
                 DGV_Device.Rows.Add(i.ToString(), entries[i].name, "", entries[i].address);
                 DGV_Device.Rows[i].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             }
+
+            foreach (DataGridViewColumn column in DGV_Device.Columns) 
+                column.SortMode = DataGridViewColumnSortMode.NotSortable; // disabling sorting for now
+
             FormClosing += (s, e) => { closed = true; };
             Task.Run(() => AutoPollAsync());
         }
@@ -130,7 +134,7 @@ namespace Gidrolock_Modbus_Scanner
                             DGV_Device.Rows[activeEntryIndex].Cells[2].Value = e.Data[0] > 0x00 ? "true" : "false";
                             break;
                         case ("uint16"):
-                            Array.Reverse(e.Data); // BitConverter.ToUInt is is little endian, I guess, so we need to flip the array
+                            Array.Reverse(e.Data); // BitConverter.ToUInt is is little endian, so we need to flip the array
                             ushort test = BitConverter.ToUInt16(e.Data, 0);
                             Console.WriteLine("ushort parsed value: " + test);
                             DGV_Device.Rows[activeEntryIndex].Cells[2].Value = test;

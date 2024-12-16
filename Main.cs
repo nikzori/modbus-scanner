@@ -436,7 +436,7 @@ namespace Gidrolock_Modbus_Scanner
                     }
                     catch (Exception err) { MessageBox.Show(err.Message); }
                 }
-
+                progressBar1.Value = 100;
             }
 
             /*
