@@ -182,7 +182,7 @@ namespace Gidrolock_Modbus_Scanner
             {
                 try
                 {
-                    var send = await Modbus.ReadRegAsync(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
+                    await Modbus.ReadRegAsync(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
                     isAwaitingResponse = true;
                     await Task.Delay(port.ReadTimeout).ContinueWith(_ =>
                     {
@@ -431,7 +431,7 @@ namespace Gidrolock_Modbus_Scanner
                 int portParsed = Int32.Parse(portText);
                 await socket.ConnectAsync(ipText, portParsed);
                 byte[] data = new byte[8];
-                Modbus.BuildMessage(0x1E, 0x03, 128, 1, ref data);
+                Modbus.BuildReadMessage(0x1E, 0x03, 128, 1, ref data);
                 AddLog("Sending to " + ipText + ":" + portText + ":" + Modbus.ByteArrayToString(data));
 
                 // set up an event listener to receive the response
@@ -475,55 +475,44 @@ namespace Gidrolock_Modbus_Scanner
                     {
                         case (FunctionCode.WriteCoil):
                             if (valueLower == "true" || valueLower == "1")
-                                await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0xFF_00);
+                                await Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0xFF_00);
                             else if (valueLower == "false" || valueLower == "0")
-                                await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0x00_00);
+                                await Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0x00_00);
                             else MessageBox.Show("Неподходящие значения для регистра типа Coil");
                             break;
                         case (FunctionCode.WriteRegister):
-                            short value;
+                            short value = 0x00_00;
+                            bool canWrite = false;
                             if (IsHex(valueLower)) //assume this is hex
                             {
-                                try
-                                {
-                                    value = Convert.ToInt16(valueLower, 16);
-                                    await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
-                                        (ushort)value);
-                                }
+                                try { value = Convert.ToInt16(valueLower, 16); canWrite = true; }
                                 catch (Exception err) { MessageBox.Show(err.Message); }
                                 break;
                             }
                             else if (IsDec(valueLower))
                             {
-                                try
-                                {
-                                    value = Convert.ToInt16(valueLower);
-                                    await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
+                                try { value = Convert.ToInt16(valueLower); canWrite = true; }
+                                catch (Exception err) { MessageBox.Show(err.Message); }
+                                break;
+                            }
+                            else if (valueLower == "true" || valueLower == "1")
+                            {
+                                value = 0x00_01;
+                                canWrite = true;
+                            }
+                            else if (valueLower == "false" || valueLower == "0")
+                            {
+                                canWrite = true;
+                            }
+                            if (canWrite)
+                            {
+                                byte[] _value = BitConverter.GetBytes(value);
+                                Array.Reverse( _value );
+                                AddLog("Отправка сообщения: " + Modbus.ByteArrayToString(Modbus.BuildWriteSingleMessage((byte)UpDown_ModbusID.Value, (byte)functionCode, (ushort)address, _value)));
+                                await Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
                                         (ushort)value);
-                                }
-                                catch (Exception err) { MessageBox.Show(err.Message); }
-                                break;
                             }
-                            else if (valueLower == "true")
-                            {
-                                try
-                                {
-                                    await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
-                                        0x01);
-                                }
-                                catch (Exception err) { MessageBox.Show(err.Message); }
-                                break;
-                            }
-                            else if (valueLower == "false")
-                            {
-                                try
-                                {
-                                    await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
-                                        0x00);
-                                }
-                                catch (Exception err) { MessageBox.Show(err.Message); }
-                                break;
-                            }
+                            else MessageBox.Show("Неподходящие значения для регистра типа Input Register");
                             break;
                         default:
                             break;

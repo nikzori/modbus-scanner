@@ -20,7 +20,7 @@ namespace Gidrolock_Modbus_Scanner
         }
 
         #region Build Message
-        public static byte[] BuildMessage(byte modbusID, byte functionCode, ushort address, ushort length, ref byte[] message)
+        public static byte[] BuildReadMessage(byte modbusID, byte functionCode, ushort address, ushort length, ref byte[] message)
         {
             //Array to receive CRC bytes:
             byte[] CRC = new byte[2];
@@ -39,6 +39,26 @@ namespace Gidrolock_Modbus_Scanner
             //Console.WriteLine("Message: " + msg);
             return message;
         }
+        public static byte[] BuildWriteSingleMessage(byte modbusID, byte functionCode, ushort address, byte[] data)
+        {
+            if (functionCode == 0x05 || functionCode == 0x06)
+            {
+                byte[] _message = new byte[8];
+                byte[] CRC = new byte[2];
+
+                _message[0] = modbusID;
+                _message[1] = functionCode;
+                _message[2] = (byte)(address >> 8);
+                _message[3] = (byte)address;
+                _message[4] = data[0];
+                _message[5] = data[1];
+                GetCRC(_message, ref CRC);
+                _message[6] = CRC[0];
+                _message[7] = CRC[1];
+                return _message;
+            }
+            else return new byte[1] { 0xFF };
+        }
         #endregion
 
         #region Read Functions
@@ -53,9 +73,9 @@ namespace Gidrolock_Modbus_Scanner
 
                 //Read functions are always 8 bytes long
                 byte[] message = new byte[8];
-                
+
                 //Build outgoing modbus message:
-                BuildMessage(slaveID, (byte)functionCode, address, length, ref message);
+                BuildReadMessage(slaveID, (byte)functionCode, address, length, ref message);
 
                 //Send modbus message to Serial Port:
                 try
@@ -65,7 +85,7 @@ namespace Gidrolock_Modbus_Scanner
                 }
                 catch (Exception err)
                 {
-                    MessageBox.Show(err.Message);
+                    MessageBox.Show(err.Message, "aeiou");
                     port.Close();
                     return false;
                 }
@@ -78,10 +98,45 @@ namespace Gidrolock_Modbus_Scanner
 
         }
         #endregion
-        
+
         #region Write Single Coil/Register
-        public static async Task<bool> WriteSingle(SerialPort port, FunctionCode functionCode, byte slaveID, ushort address, uint value)
+        public static async Task<bool> WriteSingleAsync(SerialPort port, FunctionCode functionCode, byte slaveID, ushort address, ushort value)
         {
+            //Ensure port is open:
+            if (!port.IsOpen)
+            {
+                try
+                {
+                    port.Open();
+                }
+                catch (Exception err)
+                {
+                    MessageBox.Show(err.Message);
+                    return false;
+                }
+            }
+            //Clear in/out buffers:
+            port.DiscardOutBuffer();
+            port.DiscardInBuffer();
+
+            //Build outgoing modbus message:
+            byte[] _value = BitConverter.GetBytes(value);
+            Array.Reverse(_value);
+
+            byte[] message = BuildWriteSingleMessage(slaveID, (byte)functionCode, address, _value);
+
+            //Send modbus message to Serial Port:
+            try
+            {
+                port.Write(message, 0, message.Length);
+                return true;
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+                port.Close();
+                return false;
+            }
 
         }
         #endregion
@@ -104,12 +159,16 @@ namespace Gidrolock_Modbus_Scanner
                 verbose = "Сообщение устройства не соответствует ожидаемой длине!";
                 return false;
             }
-            
+
         }
 
-        public static string ByteArrayToString(byte[] bytes)
+        public static string ByteArrayToString(byte[] bytes, bool cleanEmpty = true)
         {
-            byte[] res = CleanByteArray(bytes);
+            byte[] res;
+
+            if (cleanEmpty)
+                res = CleanByteArray(bytes);
+            else res = bytes;
 
             string dataString = BitConverter.ToString(res);
             string result = "";
