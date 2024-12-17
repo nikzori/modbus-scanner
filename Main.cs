@@ -474,6 +474,7 @@ namespace Gidrolock_Modbus_Scanner
                     switch ((FunctionCode)functionCode)
                     {
                         case (FunctionCode.WriteCoil):
+                            Console.WriteLine("Trying to force single coil");
                             if (valueLower == "true" || valueLower == "1")
                                 await Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0xFF_00);
                             else if (valueLower == "false" || valueLower == "0")

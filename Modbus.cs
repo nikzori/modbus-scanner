@@ -55,6 +55,7 @@ namespace Gidrolock_Modbus_Scanner
                 GetCRC(_message, ref CRC);
                 _message[6] = CRC[0];
                 _message[7] = CRC[1];
+                Console.WriteLine("Message: " + ByteArrayToString(_message));
                 return _message;
             }
             else return new byte[1] { 0xFF };
@@ -129,6 +130,7 @@ namespace Gidrolock_Modbus_Scanner
             try
             {
                 port.Write(message, 0, message.Length);
+                Console.WriteLine("Write message sent successfully");
                 return true;
             }
             catch (Exception err)
