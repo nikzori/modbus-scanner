@@ -33,14 +33,12 @@
             this.TextBox_Log = new System.Windows.Forms.TextBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.panel6 = new System.Windows.Forms.Panel();
-            this.UpDown_Value = new System.Windows.Forms.NumericUpDown();
             this.label6 = new System.Windows.Forms.Label();
             this.panel5 = new System.Windows.Forms.Panel();
             this.UpDown_RegLength = new System.Windows.Forms.NumericUpDown();
             this.label5 = new System.Windows.Forms.Label();
             this.Button_SendCommand = new System.Windows.Forms.Button();
             this.panel3 = new System.Windows.Forms.Panel();
-            this.UpDown_RegAddress = new System.Windows.Forms.NumericUpDown();
             this.label3 = new System.Windows.Forms.Label();
             this.panel4 = new System.Windows.Forms.Panel();
             this.CBox_Function = new System.Windows.Forms.ComboBox();
@@ -86,13 +84,13 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.CBox_Ports = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.TBox_RegAddress = new System.Windows.Forms.TextBox();
+            this.TBox_RegValue = new System.Windows.Forms.TextBox();
             this.groupBox2.SuspendLayout();
             this.panel6.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.UpDown_Value)).BeginInit();
             this.panel5.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.UpDown_RegLength)).BeginInit();
             this.panel3.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.UpDown_RegAddress)).BeginInit();
             this.panel4.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox4.SuspendLayout();
@@ -149,19 +147,12 @@
             // 
             // panel6
             // 
-            this.panel6.Controls.Add(this.UpDown_Value);
+            this.panel6.Controls.Add(this.TBox_RegValue);
             this.panel6.Controls.Add(this.label6);
-            this.panel6.Location = new System.Drawing.Point(337, 20);
+            this.panel6.Location = new System.Drawing.Point(303, 20);
             this.panel6.Name = "panel6";
-            this.panel6.Size = new System.Drawing.Size(75, 43);
+            this.panel6.Size = new System.Drawing.Size(104, 43);
             this.panel6.TabIndex = 4;
-            // 
-            // UpDown_Value
-            // 
-            this.UpDown_Value.Location = new System.Drawing.Point(6, 17);
-            this.UpDown_Value.Name = "UpDown_Value";
-            this.UpDown_Value.Size = new System.Drawing.Size(66, 20);
-            this.UpDown_Value.TabIndex = 1;
             // 
             // label6
             // 
@@ -176,7 +167,7 @@
             // 
             this.panel5.Controls.Add(this.UpDown_RegLength);
             this.panel5.Controls.Add(this.label5);
-            this.panel5.Location = new System.Drawing.Point(259, 20);
+            this.panel5.Location = new System.Drawing.Point(225, 20);
             this.panel5.Name = "panel5";
             this.panel5.Size = new System.Drawing.Size(75, 43);
             this.panel5.TabIndex = 3;
@@ -209,19 +200,12 @@
             // 
             // panel3
             // 
-            this.panel3.Controls.Add(this.UpDown_RegAddress);
+            this.panel3.Controls.Add(this.TBox_RegAddress);
             this.panel3.Controls.Add(this.label3);
-            this.panel3.Location = new System.Drawing.Point(162, 20);
+            this.panel3.Location = new System.Drawing.Point(159, 20);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(91, 43);
+            this.panel3.Size = new System.Drawing.Size(63, 43);
             this.panel3.TabIndex = 2;
-            // 
-            // UpDown_RegAddress
-            // 
-            this.UpDown_RegAddress.Location = new System.Drawing.Point(6, 17);
-            this.UpDown_RegAddress.Name = "UpDown_RegAddress";
-            this.UpDown_RegAddress.Size = new System.Drawing.Size(82, 20);
-            this.UpDown_RegAddress.TabIndex = 1;
             // 
             // label3
             // 
@@ -645,6 +629,20 @@
             this.label1.TabIndex = 0;
             this.label1.Text = "Порт";
             // 
+            // TBox_RegAddress
+            // 
+            this.TBox_RegAddress.Location = new System.Drawing.Point(3, 18);
+            this.TBox_RegAddress.Name = "TBox_RegAddress";
+            this.TBox_RegAddress.Size = new System.Drawing.Size(56, 20);
+            this.TBox_RegAddress.TabIndex = 1;
+            // 
+            // TBox_RegValue
+            // 
+            this.TBox_RegValue.Location = new System.Drawing.Point(3, 17);
+            this.TBox_RegValue.Name = "TBox_RegValue";
+            this.TBox_RegValue.Size = new System.Drawing.Size(98, 20);
+            this.TBox_RegValue.TabIndex = 1;
+            // 
             // App
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -669,13 +667,11 @@
             this.groupBox2.ResumeLayout(false);
             this.panel6.ResumeLayout(false);
             this.panel6.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.UpDown_Value)).EndInit();
             this.panel5.ResumeLayout(false);
             this.panel5.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.UpDown_RegLength)).EndInit();
             this.panel3.ResumeLayout(false);
             this.panel3.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.UpDown_RegAddress)).EndInit();
             this.panel4.ResumeLayout(false);
             this.panel4.PerformLayout();
             this.groupBox1.ResumeLayout(false);
@@ -719,13 +715,11 @@
         private System.Windows.Forms.Label label5;
         private System.Windows.Forms.Button Button_SendCommand;
         private System.Windows.Forms.Panel panel3;
-        private System.Windows.Forms.NumericUpDown UpDown_RegAddress;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Panel panel4;
         private System.Windows.Forms.ComboBox CBox_Function;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Panel panel6;
-        private System.Windows.Forms.NumericUpDown UpDown_Value;
         private System.Windows.Forms.Label label6;
         private System.Windows.Forms.Label Label_ConfigTip;
         private System.Windows.Forms.Button Button_LoadConfig;
@@ -768,6 +762,8 @@
         private System.Windows.Forms.Panel panel1;
         private System.Windows.Forms.ComboBox CBox_Ports;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.TextBox TBox_RegValue;
+        private System.Windows.Forms.TextBox TBox_RegAddress;
     }
 }
 

@@ -103,12 +103,7 @@ namespace Gidrolock_Modbus_Scanner
             CBox_Parity.Items.Add("Нечетн.");
             CBox_Parity.SelectedIndex = 0;
 
-
-            UpDown_RegAddress.Minimum = 0;
-            UpDown_RegAddress.Maximum = 65535;
-
-            UpDown_Value.Minimum = 0;
-            UpDown_Value.Maximum = 65535; // 2^16 
+            UpDown_RegLength.Value = 0;
 
             Radio_SerialPort.Checked = true;
             GBox_Ethernet.Enabled = false;
@@ -156,7 +151,7 @@ namespace Gidrolock_Modbus_Scanner
         #endregion
 
         // Send a custom message
-        async Task SendMessageAsync(FunctionCode functionCode, ushort address, ushort length)
+        async Task ReadRegisterAsync(FunctionCode functionCode, ushort address, ushort length)
         {
             if (CBox_Ports.Text == "")
                 MessageBox.Show("Необходимо выбрать COM порт.", "Ошибка", MessageBoxButtons.OK);
@@ -204,33 +199,6 @@ namespace Gidrolock_Modbus_Scanner
                     MessageBox.Show(err.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-
-            /* - Writing to Registers - */
-            else
-            {
-                try
-                {
-                    if (CBox_Function.SelectedIndex < 6) // Single Registers
-                    {
-                        byte[] request = new byte[8];
-                        Modbus.BuildMessage((byte)UpDown_ModbusID.Value, (byte)(1 + functionCode), address, length, ref request);
-                        string messageParsed = Modbus.ByteArrayToString(request);
-
-                        var send = await Modbus.WriteSingle(port, functionCode, (byte)UpDown_ModbusID.Value, address, (ushort)UpDown_Value.Value);
-                    }
-                    else // Multiple Registers
-                    {
-                        byte[] request = new byte[(int)UpDown_RegLength.Value * 2 + 6];
-                        // TODO
-                    }
-                }
-                catch (Exception err)
-                {
-                    port.Close();
-                    MessageBox.Show(err.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-
         }
 
         private async void ButtonConnect_Click(object sender, EventArgs e)
@@ -345,7 +313,7 @@ namespace Gidrolock_Modbus_Scanner
 
                 foreach (CheckEntry ce in juju.Keys)
                 {
-                    await SendMessageAsync((FunctionCode)ce.registerType, ce.address, ce.length);   // send read request to device,
+                    await ReadRegisterAsync((FunctionCode)ce.registerType, ce.address, ce.length);   // send read request to device,
 
                     while (message is null) // wait for response to arrive
                         Thread.Sleep(10);
@@ -441,7 +409,7 @@ namespace Gidrolock_Modbus_Scanner
 
             /*
             if (Radio_SerialPort.Checked)
-                await SendMessageAsync(FunctionCode.InputRegister, 200, 6);
+                await ReadRegisterAsync(FunctionCode.InputRegister, 200, 6);
             //else EthernetParse();
             */
         }
@@ -493,25 +461,83 @@ namespace Gidrolock_Modbus_Scanner
 
         private async void Button_SendCommand_Click(object sender, EventArgs e)
         {
-            FunctionCode functionCode = (FunctionCode)CBox_Function.SelectedIndex + 1;
-            ushort address = (ushort)UpDown_RegAddress.Value;
+            int functionCode = CBox_Function.SelectedIndex + 1;
+            short address;
             ushort length = (ushort)UpDown_RegLength.Value;
+            if (Int16.TryParse(TBox_RegAddress.Text, out address))
+            {
+                if (functionCode <= 4)
+                    await ReadRegisterAsync((FunctionCode)functionCode, (ushort)address, length);
+                else
+                {
+                    string valueLower = TBox_RegValue.Text.ToLower();
+                    switch ((FunctionCode)functionCode)
+                    {
+                        case (FunctionCode.WriteCoil):
+                            if (valueLower == "true" || valueLower == "1")
+                                await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0xFF_00);
+                            else if (valueLower == "false" || valueLower == "0")
+                                await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0x00_00);
+                            else MessageBox.Show("Неподходящие значения для регистра типа Coil");
+                            break;
+                        case (FunctionCode.WriteRegister):
+                            short value;
+                            if (IsHex(valueLower)) //assume this is hex
+                            {
+                                try
+                                {
+                                    value = Convert.ToInt16(valueLower, 16);
+                                    await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
+                                        (ushort)value);
+                                }
+                                catch (Exception err) { MessageBox.Show(err.Message); }
+                                break;
+                            }
+                            else if (IsDec(valueLower))
+                            {
+                                try
+                                {
+                                    value = Convert.ToInt16(valueLower);
+                                    await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
+                                        (ushort)value);
+                                }
+                                catch (Exception err) { MessageBox.Show(err.Message); }
+                                break;
+                            }
+                            else if (valueLower == "true")
+                            {
+                                try
+                                {
+                                    await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
+                                        0x01);
+                                }
+                                catch (Exception err) { MessageBox.Show(err.Message); }
+                                break;
+                            }
+                            else if (valueLower == "false")
+                            {
+                                try
+                                {
+                                    await Modbus.WriteSingle(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
+                                        0x00);
+                                }
+                                catch (Exception err) { MessageBox.Show(err.Message); }
+                                break;
+                            }
+                            break;
+                        default:
+                            break;
 
-            await SendMessageAsync(functionCode, address, length);
+                    }
+                }
+            }
         }
 
         private void OnSelectedFunctionChanged(object sender, EventArgs e)
         {
             if (CBox_Function.SelectedIndex < 4)
-                UpDown_Value.Enabled = false;
-            else
-            {
-                if (CBox_Function.SelectedIndex == 4 || CBox_Function.SelectedIndex == 6)
-                    UpDown_Value.Maximum = 1;
-                else UpDown_Value.Maximum = 65535;
-
-                UpDown_Value.Enabled = true;
-            }
+                TBox_RegValue.Enabled = false;
+            else TBox_RegValue.Enabled = true;
         }
 
         private void Radio_SerialPort_CheckedChanged(object sender, EventArgs e)
@@ -580,6 +606,30 @@ namespace Gidrolock_Modbus_Scanner
         private void CBox_Ports_Click(object sender, MouseEventArgs e)
         {
 
+        }
+
+        public static bool IsHex(string str)
+        {
+            str = str.ToLower();
+            for (int i = 0; i < str.Length; i++)
+            {
+                if (str[i] < '0' || str[i] > 'F')
+                {
+                    if ((i == 0 || i == 1) && str[i] == 'x') 
+                        continue;
+                    else return false;
+                }
+            }
+            return true;
+        }
+        public static bool IsDec(string str)
+        {
+            foreach (char c in str)
+            {
+                if (c < '0' || c > '9')
+                    return false;
+            }
+            return true;
         }
     }
 }

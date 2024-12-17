@@ -80,23 +80,9 @@ namespace Gidrolock_Modbus_Scanner
         #endregion
         
         #region Write Single Coil/Register
-        public static async Task<bool> WriteSingle(SerialPort port, FunctionCode functionCode, byte address, ushort start, uint value)
+        public static async Task<bool> WriteSingle(SerialPort port, FunctionCode functionCode, byte slaveID, ushort address, uint value)
         {
-            MessageBox.Show("Not implemented");
-            return false;
-            /*
-            if (port.IsOpen)
-            {
-                //Clear in/out buffers:
-                port.DiscardOutBuffer();
-                port.DiscardInBuffer();
-            }
-            else
-            {
-                MessageBox.Show("Порт не открыт");
-                return false;
-            }
-            */
+
         }
         #endregion
         public static bool ParseResponse(byte[] res, ref string verbose)
