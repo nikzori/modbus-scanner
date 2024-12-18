@@ -449,18 +449,90 @@ namespace Gidrolock_Modbus_Scanner
         void OnResponseReceived(object sender, ModbusResponseEventArgs e)
         {
             isAwaitingResponse = false;
-            TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("Получен ответ: " + Modbus.ByteArrayToString(e.Message)); });
-            TextBox_Log.Invoke((MethodInvoker)delegate { AddLog("UTF-8: " + e.Text); });
+            AddLog("Получен ответ: " + Modbus.ByteArrayToString(e.Message));
+            switch(e.Status)
+            {
+                case (ModbusStatus.ReadSuccess):
+                    if (e.Message[1] == 0x03 || e.Message[1] == 0x04)
+                    {
+                        AddLog("Unicode: " + ByteArrayToUnicode(e.Data));
+
+                    } 
+                    break;
+                case (ModbusStatus.WriteSuccess):
+                    AddLog("Write success;");
+                    break;
+                case (ModbusStatus.Error):
+                    string errorDesc;
+                    switch (e.Message[2])
+                    {
+                        case (0x01):
+                            errorDesc = "01 - Illegal Function";
+                            break;
+                        case (0x02):
+                            errorDesc = "02 - Illegal Data Address";
+                            break;
+                        case (0x03):
+                            errorDesc = "03 - Illegal Data Value";
+                            break;
+                        case (0x04):
+                            errorDesc = "04 - Slave Device Failure";
+                            break;
+                        case (0x05):
+                            errorDesc = "05 - Acknowledge";
+                            break;
+                        case (0x06):
+                            errorDesc = "06 - Slave Device Busy";
+                            break;
+                        case (0x07):
+                            errorDesc = "07 - Negative Acknowledge";
+                            break;
+                        case (0x08):
+                            errorDesc = "08 - Memory Parity Error";
+                            break;
+                        case (0x0A):
+                            errorDesc = "10 - Gateway Path Unavailable";
+                            break;
+                        case (0x0B):
+                            errorDesc = "11 - Gateway Target Device Failed to Respond";
+                            break;
+                        default:
+                            errorDesc = "Unknown error code";
+                            break;
+                    }
+                    AddLog("Error code: " + errorDesc);
+                    break;
+
+            }
         }
 
         void AddLog(string message)
         {
             dateTime = DateTime.Now;
-            TextBox_Log.AppendText(Environment.NewLine + "[" + dateTime.Hour + ":" + dateTime.Minute + ":" + dateTime.Second + "] " + message);
+            TextBox_Log.Invoke((MethodInvoker)delegate { TextBox_Log.AppendText(Environment.NewLine + "[" + dateTime.Hour + ":" + dateTime.Minute + ":" + dateTime.Second + "] " + message); });
         }
 
         private async void Button_SendCommand_Click(object sender, EventArgs e)
         {
+            /* - Port Setup - */
+            if (port.IsOpen)
+                port.Close();
+
+            port.Handshake = Handshake.None;
+            port.PortName = CBox_Ports.Text;
+            port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex];
+            port.Parity = Parity.None;
+            port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
+            port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
+
+            port.ReadTimeout = 3000;
+            port.WriteTimeout = 3000;
+
+
+            message = new byte[255];
+            port.Open();
+
+
             int functionCode = CBox_Function.SelectedIndex + 1;
             short address;
             ushort length = (ushort)UpDown_RegLength.Value;
@@ -507,10 +579,7 @@ namespace Gidrolock_Modbus_Scanner
                             }
                             if (canWrite)
                             {
-                                byte[] _value = BitConverter.GetBytes(value);
-                                Array.Reverse( _value );
-                                AddLog("Отправка сообщения: " + Modbus.ByteArrayToString(Modbus.BuildWriteSingleMessage((byte)UpDown_ModbusID.Value, (byte)functionCode, (ushort)address, _value)));
-                                await Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
+                                _ = Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
                                         (ushort)value);
                             }
                             else MessageBox.Show("Неподходящие значения для регистра типа Input Register");
@@ -620,6 +689,20 @@ namespace Gidrolock_Modbus_Scanner
                     return false;
             }
             return true;
+        }
+        public static string ByteArrayToUnicode(byte[] input) 
+        {
+            // stupid fucking WinForm textbox breaks from null symbols
+            // stupid fucking Encoding class does byte-by-byte conversion
+            List<char> result = new List<char>(input.Length/2);
+            byte[] flip = input;
+            Array.Reverse(flip);
+            for (int i = 0; i < flip.Length; i += 2)
+            {
+                result.Add(BitConverter.ToChar(flip, i));
+            }
+            result.Reverse();
+            return new string(result.ToArray());
         }
     }
 }

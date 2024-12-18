@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO.Ports;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -55,7 +56,6 @@ namespace Gidrolock_Modbus_Scanner
                 GetCRC(_message, ref CRC);
                 _message[6] = CRC[0];
                 _message[7] = CRC[1];
-                Console.WriteLine("Message: " + ByteArrayToString(_message));
                 return _message;
             }
             else return new byte[1] { 0xFF };
@@ -77,19 +77,22 @@ namespace Gidrolock_Modbus_Scanner
 
                 //Build outgoing modbus message:
                 BuildReadMessage(slaveID, (byte)functionCode, address, length, ref message);
-
-                //Send modbus message to Serial Port:
-                try
+                if (message.Length > 1)
                 {
-                    await Task.Run(() => { port.Write(message, 0, message.Length); });
-                    return true;
+                    //Send modbus message to Serial Port:
+                    try
+                    {
+                        await Task.Run(() => { port.Write(message, 0, message.Length); });
+                        return true;
+                    }
+                    catch (Exception err)
+                    {
+                        MessageBox.Show(err.Message, "aeiou");
+                        port.Close();
+                        return false;
+                    }
                 }
-                catch (Exception err)
-                {
-                    MessageBox.Show(err.Message, "aeiou");
-                    port.Close();
-                    return false;
-                }
+                else return false;
             }
             else
             {
@@ -125,12 +128,11 @@ namespace Gidrolock_Modbus_Scanner
             Array.Reverse(_value);
 
             byte[] message = BuildWriteSingleMessage(slaveID, (byte)functionCode, address, _value);
-
             //Send modbus message to Serial Port:
             try
             {
                 port.Write(message, 0, message.Length);
-                Console.WriteLine("Write message sent successfully");
+                Console.WriteLine("Message sent successfully.");
                 return true;
             }
             catch (Exception err)
@@ -236,28 +238,32 @@ namespace Gidrolock_Modbus_Scanner
             try
             {
                 byte[] message = new byte[port.BytesToRead];
-                port.Read(message, 0, 3);
-                int length = (int)message[2];
-                for (int i = 0; i < length + 2; i++)
+                port.Read(message, 0, port.BytesToRead);
+                Console.WriteLine("Incoming message: " + ByteArrayToString(message));
+                if (message[1] <= 0x04) // read functions
                 {
-                    port.Read(message, i + 3, 1);
+                    Console.WriteLine("It's a read message");
+                    ResponseReceived.Invoke(null, new ModbusResponseEventArgs(message, ModbusStatus.ReadSuccess));
                 }
-
-                byte[] data = new byte[length];
-                for (int i = 0; i < length; i++)
+                else
                 {
-                    data[i] = message[i + 3];
+                    if (message[1] <= 0x10) // write functions
+                    {
+                        Console.WriteLine("It's a write message");
+                        ResponseReceived.Invoke(null, new ModbusResponseEventArgs(message, ModbusStatus.WriteSuccess));
+                    }
+                    else // error codes
+                    {
+                        Console.WriteLine("It's an error");
+                        ResponseReceived.Invoke(null, new ModbusResponseEventArgs(message, ModbusStatus.Error));
+                    }
                 }
-                string dataCleaned = ByteArrayToString(message);
-
-                port.DiscardInBuffer();
-
-                ResponseReceived.Invoke(null, new ModbusResponseEventArgs(message, data, Encoding.UTF8.GetString(data)));
             }
             catch (Exception err)
             {
                 MessageBox.Show(err.Message);
             }
+            port.DiscardInBuffer();
         }
 
     }
@@ -266,13 +272,24 @@ namespace Gidrolock_Modbus_Scanner
     {
         public byte[] Message { get; set; }
         public byte[] Data { get; set; }
-        public string Text { get; set; }
-        public ModbusResponseEventArgs(byte[] message, byte[] data, string text)
+        public ModbusStatus Status { get; set; }
+        public ModbusResponseEventArgs(byte[] message, ModbusStatus status)
         {
             this.Message = message;
-            this.Data = data;
-            this.Text = text;
+            this.Status = status;
+            if (status == ModbusStatus.ReadSuccess)
+            {
+                int dataLength = message[2];
+                Data = new byte[dataLength];
+                for (int i = 0; i < dataLength; i++)
+                {
+                    Data[i] = message[i + 3];
+                }
+                Console.WriteLine("Read data: " + Modbus.ByteArrayToString(Data, false));
+            }
+            else Data = new byte[1] {0x0F};
         }
     }
 
+    public enum ModbusStatus { ReadSuccess, WriteSuccess, Error };
 }
