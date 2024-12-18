@@ -77,6 +77,7 @@ namespace Gidrolock_Modbus_Scanner
 
                 //Build outgoing modbus message:
                 BuildReadMessage(slaveID, (byte)functionCode, address, length, ref message);
+                
                 if (message.Length > 1)
                 {
                     //Send modbus message to Serial Port:
@@ -128,6 +129,7 @@ namespace Gidrolock_Modbus_Scanner
             Array.Reverse(_value);
 
             byte[] message = BuildWriteSingleMessage(slaveID, (byte)functionCode, address, _value);
+            Console.WriteLine("Write message: " + ByteArrayToString(message));
             //Send modbus message to Serial Port:
             try
             {

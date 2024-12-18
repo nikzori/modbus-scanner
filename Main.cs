@@ -453,10 +453,23 @@ namespace Gidrolock_Modbus_Scanner
             switch(e.Status)
             {
                 case (ModbusStatus.ReadSuccess):
+                    string values = "";
+                    if (e.Message[1] <= 0x02)
+                    {
+                        for (int i = 0; i < e.Data.Length; i++)
+                        {
+                            values += Convert.ToString(e.Data[i], 2).PadLeft(8, '0') + " ";
+                        }
+                        AddLog("Bin: " + values);
+                    }
                     if (e.Message[1] == 0x03 || e.Message[1] == 0x04)
                     {
+                        for (int i = 0; i < e.Data.Length; i += 2)
+                        {
+                            values += ((e.Data[i] << 8) + e.Data[i + 1]).ToString() + "; ";
+                        }
+                        AddLog("Dec: " + values);
                         AddLog("Unicode: " + ByteArrayToUnicode(e.Data));
-
                     } 
                     break;
                 case (ModbusStatus.WriteSuccess):
@@ -534,6 +547,7 @@ namespace Gidrolock_Modbus_Scanner
 
 
             int functionCode = CBox_Function.SelectedIndex + 1;
+            Console.WriteLine("Set fCode: " + functionCode);
             short address;
             ushort length = (ushort)UpDown_RegLength.Value;
             if (Int16.TryParse(TBox_RegAddress.Text, out address))
@@ -556,17 +570,38 @@ namespace Gidrolock_Modbus_Scanner
                         case (FunctionCode.WriteRegister):
                             short value = 0x00_00;
                             bool canWrite = false;
-                            if (IsHex(valueLower)) //assume this is hex
-                            {
-                                try { value = Convert.ToInt16(valueLower, 16); canWrite = true; }
-                                catch (Exception err) { MessageBox.Show(err.Message); }
-                                break;
-                            }
-                            else if (IsDec(valueLower))
+                            if (IsDec(valueLower))
                             {
                                 try { value = Convert.ToInt16(valueLower); canWrite = true; }
                                 catch (Exception err) { MessageBox.Show(err.Message); }
-                                break;
+                            }
+                            else if (IsHex(valueLower))
+                            {
+                                Console.WriteLine("Got hex value");
+                                for (int i = 0; i < valueLower.Length; i++)
+                                {
+                                    if (valueLower[i] == 'x')
+                                    {
+                                        valueLower = valueLower.Remove(i, 1);
+                                        break;
+                                    }
+                                }
+                                try { value = Convert.ToInt16(valueLower, 16); canWrite = true; }
+                                catch (Exception err) { MessageBox.Show(err.Message); }
+                            }
+                            else if (IsBin(valueLower))
+                            {
+                                Console.WriteLine("Got bin value");
+                                for (int i = 0; i < valueLower.Length; i++)
+                                {
+                                    if (valueLower[i] == 'b')
+                                    {
+                                        valueLower = valueLower.Remove(i, 1);
+                                        break;
+                                    }
+                                }
+                                try { value = Convert.ToInt16(valueLower, 2); canWrite = true; }
+                                catch (Exception err) { MessageBox.Show(err.Message); }
                             }
                             else if (valueLower == "true" || valueLower == "1")
                             {
@@ -577,14 +612,18 @@ namespace Gidrolock_Modbus_Scanner
                             {
                                 canWrite = true;
                             }
-                            if (canWrite)
+                            else 
                             {
-                                _ = Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
-                                        (ushort)value);
+                                MessageBox.Show("Неподходящие значения для регистра типа Input Register");
+                                break; 
                             }
-                            else MessageBox.Show("Неподходящие значения для регистра типа Input Register");
+
+                            if (canWrite)
+                                await Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
+                                        (ushort)value);
                             break;
                         default:
+                            MessageBox.Show("WIP");
                             break;
 
                     }
@@ -597,6 +636,9 @@ namespace Gidrolock_Modbus_Scanner
             if (CBox_Function.SelectedIndex < 4)
                 TBox_RegValue.Enabled = false;
             else TBox_RegValue.Enabled = true;
+            if (CBox_Function.SelectedIndex == 4 || CBox_Function.SelectedIndex == 5)
+                UpDown_RegLength.Enabled = false;
+            else UpDown_RegLength.Enabled = true;
         }
 
         private void Radio_SerialPort_CheckedChanged(object sender, EventArgs e)
@@ -690,13 +732,27 @@ namespace Gidrolock_Modbus_Scanner
             }
             return true;
         }
+        public static bool IsBin(string str)
+        {
+            str = str.ToLower();
+            for (int i = 0; i < str.Length;i++)
+            {
+                if (str[i] != '0' && str[i] != '1')
+                {
+                    if ((i == 0 || i == 1) && str[i] == 'b')
+                        continue;
+                    else return false;
+                }
+            }
+            return true;
+        }
         public static string ByteArrayToUnicode(byte[] input) 
         {
             // stupid fucking WinForm textbox breaks from null symbols
             // stupid fucking Encoding class does byte-by-byte conversion
             List<char> result = new List<char>(input.Length/2);
             byte[] flip = input;
-            Array.Reverse(flip);
+            Array.Reverse(flip); // stupid fucking BitConverter is little-endian and spits out chinese nonsense otherwise
             for (int i = 0; i < flip.Length; i += 2)
             {
                 result.Add(BitConverter.ToChar(flip, i));
