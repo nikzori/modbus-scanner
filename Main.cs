@@ -350,6 +350,7 @@ namespace Gidrolock_Modbus_Scanner
                         else if (ce.dataType == "bool") 
                         {
                             // why would you even do that lmao
+
                         }
                         else if (ce.dataType == "uint16" || ce.dataType == "uint32")
                         {

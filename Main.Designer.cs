@@ -33,12 +33,14 @@
             this.TextBox_Log = new System.Windows.Forms.TextBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.panel6 = new System.Windows.Forms.Panel();
+            this.TBox_RegValue = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
             this.panel5 = new System.Windows.Forms.Panel();
             this.UpDown_RegLength = new System.Windows.Forms.NumericUpDown();
             this.label5 = new System.Windows.Forms.Label();
             this.Button_SendCommand = new System.Windows.Forms.Button();
             this.panel3 = new System.Windows.Forms.Panel();
+            this.TBox_RegAddress = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.panel4 = new System.Windows.Forms.Panel();
             this.CBox_Function = new System.Windows.Forms.ComboBox();
@@ -84,8 +86,6 @@
             this.panel1 = new System.Windows.Forms.Panel();
             this.CBox_Ports = new System.Windows.Forms.ComboBox();
             this.label1 = new System.Windows.Forms.Label();
-            this.TBox_RegAddress = new System.Windows.Forms.TextBox();
-            this.TBox_RegValue = new System.Windows.Forms.TextBox();
             this.groupBox2.SuspendLayout();
             this.panel6.SuspendLayout();
             this.panel5.SuspendLayout();
@@ -154,6 +154,13 @@
             this.panel6.Size = new System.Drawing.Size(104, 43);
             this.panel6.TabIndex = 4;
             // 
+            // TBox_RegValue
+            // 
+            this.TBox_RegValue.Location = new System.Drawing.Point(3, 17);
+            this.TBox_RegValue.Name = "TBox_RegValue";
+            this.TBox_RegValue.Size = new System.Drawing.Size(98, 20);
+            this.TBox_RegValue.TabIndex = 1;
+            // 
             // label6
             // 
             this.label6.AutoSize = true;
@@ -206,6 +213,13 @@
             this.panel3.Name = "panel3";
             this.panel3.Size = new System.Drawing.Size(63, 43);
             this.panel3.TabIndex = 2;
+            // 
+            // TBox_RegAddress
+            // 
+            this.TBox_RegAddress.Location = new System.Drawing.Point(3, 18);
+            this.TBox_RegAddress.Name = "TBox_RegAddress";
+            this.TBox_RegAddress.Size = new System.Drawing.Size(56, 20);
+            this.TBox_RegAddress.TabIndex = 1;
             // 
             // label3
             // 
@@ -628,20 +642,6 @@
             this.label1.Size = new System.Drawing.Size(32, 13);
             this.label1.TabIndex = 0;
             this.label1.Text = "Порт";
-            // 
-            // TBox_RegAddress
-            // 
-            this.TBox_RegAddress.Location = new System.Drawing.Point(3, 18);
-            this.TBox_RegAddress.Name = "TBox_RegAddress";
-            this.TBox_RegAddress.Size = new System.Drawing.Size(56, 20);
-            this.TBox_RegAddress.TabIndex = 1;
-            // 
-            // TBox_RegValue
-            // 
-            this.TBox_RegValue.Location = new System.Drawing.Point(3, 17);
-            this.TBox_RegValue.Name = "TBox_RegValue";
-            this.TBox_RegValue.Size = new System.Drawing.Size(98, 20);
-            this.TBox_RegValue.TabIndex = 1;
             // 
             // App
             // 

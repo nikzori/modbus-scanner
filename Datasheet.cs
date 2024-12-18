@@ -133,7 +133,7 @@ namespace Gidrolock_Modbus_Scanner
                             DGV_Device.Rows[activeEntryIndex].Cells[2].Value = e.Data[0] > 0x00 ? "true" : "false";
                             break;
                         case ("uint16"):
-                            Array.Reverse(e.Data); // BitConverter.ToUInt is is little endian, so we need to flip the array
+                            //Array.Reverse(e.Data); // BitConverter.ToUInt is is little endian, so we need to flip the array
                             ushort test = BitConverter.ToUInt16(e.Data, 0);
                             Console.WriteLine("ushort parsed value: " + test);
                             DGV_Device.Rows[activeEntryIndex].Cells[2].Value = test;
@@ -149,6 +149,7 @@ namespace Gidrolock_Modbus_Scanner
                                 if (e.Data[i] != 0)
                                     bytes.Add(e.Data[i]);
                             }
+                            bytes.Reverse();
                             DGV_Device.Rows[activeEntryIndex].Cells[2].Value = System.Text.Encoding.UTF8.GetString(bytes.ToArray());
                             break;
                         default:
