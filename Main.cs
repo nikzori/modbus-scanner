@@ -66,8 +66,8 @@ namespace Gidrolock_Modbus_Scanner
             CBox_Function.Items.Add("04 Read Input Register");
             CBox_Function.Items.Add("05 Write Single Coil");
             CBox_Function.Items.Add("06 Write Single Register");
-            CBox_Function.Items.Add("0F Write Multiple Coils");
-            CBox_Function.Items.Add("10 Write Multiple Registers");
+            //CBox_Function.Items.Add("0F Write Multiple Coils");
+            //CBox_Function.Items.Add("10 Write Multiple Registers");
             CBox_Function.SelectedItem = CBox_Function.Items[0];
 
             CBox_BaudRate.Items.Add("110");
@@ -104,12 +104,14 @@ namespace Gidrolock_Modbus_Scanner
             CBox_Parity.SelectedIndex = 0;
 
             UpDown_RegLength.Value = 0;
-
+            /* TCP Setup */
+            /*
             Radio_SerialPort.Checked = true;
             GBox_Ethernet.Enabled = false;
             TBox_IP.Text = "192.168.3.7";
             TBox_Port.Text = "8887";
             TBox_Timeout.Text = "3";
+            */
             if (Directory.GetDirectories(Application.StartupPath).Contains(Application.StartupPath + "\\Configs") == false)
             {
                 Task.Delay(1500).ContinueWith(t =>
@@ -212,6 +214,12 @@ namespace Gidrolock_Modbus_Scanner
             if (CBox_Ports.SelectedItem.ToString() == "COM1")
             {
                 DialogResult res = MessageBox.Show("Выбран серийный порт COM1, который обычно является портом PS/2 или RS-232, не подключенным к Modbus устройству. Продолжить?", "Внимание", MessageBoxButtons.OKCancel);
+                if (res == DialogResult.Cancel)
+                    return;
+            }
+            if (UpDown_ModbusID.Value == 0)
+            {
+                DialogResult res = MessageBox.Show("Указан Modbus ID 0 — глобальное вещание. Если в линии находится больше одного ведомого устройства, возникнут проблемы с коллизией. Продолжить?", "Внимание", MessageBoxButtons.OKCancel);
                 if (res == DialogResult.Cancel)
                     return;
             }
@@ -414,7 +422,7 @@ namespace Gidrolock_Modbus_Scanner
             //else EthernetParse();
             */
         }
-
+        /*
         async void EthernetParse()
         {
             string ipText = TBox_IP.Text;
@@ -440,7 +448,7 @@ namespace Gidrolock_Modbus_Scanner
             }
 
         }
-
+        */
         void CBox_Ports_Click(object sender, EventArgs e)
         {
             CBox_Ports.Items.Clear();
@@ -554,7 +562,13 @@ namespace Gidrolock_Modbus_Scanner
             if (Int16.TryParse(TBox_RegAddress.Text, out address))
             {
                 if (functionCode <= 4)
+                {
+                    byte[] _msg = new byte[8];
+                    Modbus.BuildReadMessage((byte)UpDown_ModbusID.Value, (byte)functionCode, (ushort)address, (ushort)length, ref _msg);
+                    string msg = Modbus.ByteArrayToString(_msg);
+                    AddLog("Отправка сообщения: " + msg);
                     await ReadRegisterAsync((FunctionCode)functionCode, (ushort)address, length);
+                }
                 else
                 {
                     string valueLower = TBox_RegValue.Text.ToLower();
@@ -613,10 +627,10 @@ namespace Gidrolock_Modbus_Scanner
                             {
                                 canWrite = true;
                             }
-                            else 
+                            else
                             {
                                 MessageBox.Show("Неподходящие значения для регистра типа Input Register");
-                                break; 
+                                break;
                             }
 
                             if (canWrite)
@@ -641,7 +655,8 @@ namespace Gidrolock_Modbus_Scanner
                 UpDown_RegLength.Enabled = false;
             else UpDown_RegLength.Enabled = true;
         }
-
+        /* TCP/RTU switch behaviour */
+        /*
         private void Radio_SerialPort_CheckedChanged(object sender, EventArgs e)
         {
             if (Radio_SerialPort.Checked)
@@ -655,7 +670,7 @@ namespace Gidrolock_Modbus_Scanner
                 GBox_Ethernet.Enabled = true;
             else GBox_Ethernet.Enabled = false;
         }
-
+        */
         private async Task<bool> SocketDataTransfer(byte[] data)
         {
             await Task.Run(() => { socket.Send(data); });

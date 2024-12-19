@@ -51,19 +51,6 @@
             this.Label_ConfPath = new System.Windows.Forms.Label();
             this.button1 = new System.Windows.Forms.Button();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
-            this.groupBox4 = new System.Windows.Forms.GroupBox();
-            this.Radio_Ethernet = new System.Windows.Forms.RadioButton();
-            this.Radio_SerialPort = new System.Windows.Forms.RadioButton();
-            this.GBox_Ethernet = new System.Windows.Forms.GroupBox();
-            this.panel16 = new System.Windows.Forms.Panel();
-            this.TBox_Port = new System.Windows.Forms.TextBox();
-            this.label16 = new System.Windows.Forms.Label();
-            this.panel17 = new System.Windows.Forms.Panel();
-            this.TBox_Timeout = new System.Windows.Forms.TextBox();
-            this.label17 = new System.Windows.Forms.Label();
-            this.panel18 = new System.Windows.Forms.Panel();
-            this.TBox_IP = new System.Windows.Forms.TextBox();
-            this.label18 = new System.Windows.Forms.Label();
             this.GBox_Serial = new System.Windows.Forms.GroupBox();
             this.panel11 = new System.Windows.Forms.Panel();
             this.CBox_Parity = new System.Windows.Forms.ComboBox();
@@ -93,11 +80,6 @@
             this.panel3.SuspendLayout();
             this.panel4.SuspendLayout();
             this.groupBox1.SuspendLayout();
-            this.groupBox4.SuspendLayout();
-            this.GBox_Ethernet.SuspendLayout();
-            this.panel16.SuspendLayout();
-            this.panel17.SuspendLayout();
-            this.panel18.SuspendLayout();
             this.GBox_Serial.SuspendLayout();
             this.panel11.SuspendLayout();
             this.panel10.SuspendLayout();
@@ -113,9 +95,9 @@
             // 
             this.Button_Connect.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.Button_Connect.Location = new System.Drawing.Point(402, 238);
+            this.Button_Connect.Location = new System.Drawing.Point(388, 54);
             this.Button_Connect.Name = "Button_Connect";
-            this.Button_Connect.Size = new System.Drawing.Size(108, 25);
+            this.Button_Connect.Size = new System.Drawing.Size(104, 25);
             this.Button_Connect.TabIndex = 4;
             this.Button_Connect.Text = "Подключиться";
             this.Button_Connect.UseVisualStyleBackColor = true;
@@ -123,7 +105,7 @@
             // 
             // TextBox_Log
             // 
-            this.TextBox_Log.Location = new System.Drawing.Point(12, 269);
+            this.TextBox_Log.Location = new System.Drawing.Point(12, 192);
             this.TextBox_Log.Multiline = true;
             this.TextBox_Log.Name = "TextBox_Log";
             this.TextBox_Log.ReadOnly = true;
@@ -138,7 +120,7 @@
             this.groupBox2.Controls.Add(this.Button_SendCommand);
             this.groupBox2.Controls.Add(this.panel3);
             this.groupBox2.Controls.Add(this.panel4);
-            this.groupBox2.Location = new System.Drawing.Point(12, 393);
+            this.groupBox2.Location = new System.Drawing.Point(12, 316);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(498, 63);
             this.groupBox2.TabIndex = 5;
@@ -261,7 +243,7 @@
             // Label_ConfigTip
             // 
             this.Label_ConfigTip.AutoSize = true;
-            this.Label_ConfigTip.Location = new System.Drawing.Point(8, 16);
+            this.Label_ConfigTip.Location = new System.Drawing.Point(5, 16);
             this.Label_ConfigTip.Name = "Label_ConfigTip";
             this.Label_ConfigTip.Size = new System.Drawing.Size(94, 13);
             this.Label_ConfigTip.TabIndex = 10;
@@ -271,7 +253,7 @@
             // 
             this.Button_LoadConfig.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.Button_LoadConfig.Location = new System.Drawing.Point(415, 43);
+            this.Button_LoadConfig.Location = new System.Drawing.Point(89, 54);
             this.Button_LoadConfig.Name = "Button_LoadConfig";
             this.Button_LoadConfig.Size = new System.Drawing.Size(77, 25);
             this.Button_LoadConfig.TabIndex = 11;
@@ -282,21 +264,23 @@
             // groupBox1
             // 
             this.groupBox1.Controls.Add(this.Label_ConfPath);
+            this.groupBox1.Controls.Add(this.progressBar1);
             this.groupBox1.Controls.Add(this.button1);
             this.groupBox1.Controls.Add(this.Button_LoadConfig);
             this.groupBox1.Controls.Add(this.Label_ConfigTip);
-            this.groupBox1.Location = new System.Drawing.Point(12, 158);
+            this.groupBox1.Controls.Add(this.Button_Connect);
+            this.groupBox1.Location = new System.Drawing.Point(12, 85);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(498, 74);
+            this.groupBox1.Size = new System.Drawing.Size(498, 86);
             this.groupBox1.TabIndex = 13;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Конфигурация";
             // 
             // Label_ConfPath
             // 
-            this.Label_ConfPath.Location = new System.Drawing.Point(9, 29);
+            this.Label_ConfPath.Location = new System.Drawing.Point(6, 29);
             this.Label_ConfPath.Name = "Label_ConfPath";
-            this.Label_ConfPath.Size = new System.Drawing.Size(400, 39);
+            this.Label_ConfPath.Size = new System.Drawing.Size(480, 22);
             this.Label_ConfPath.TabIndex = 14;
             this.Label_ConfPath.Text = "Файл не выбран.";
             this.Label_ConfPath.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -305,7 +289,7 @@
             // 
             this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.button1.Location = new System.Drawing.Point(415, 12);
+            this.button1.Location = new System.Drawing.Point(6, 54);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(77, 25);
             this.button1.TabIndex = 13;
@@ -315,130 +299,10 @@
             // 
             // progressBar1
             // 
-            this.progressBar1.Location = new System.Drawing.Point(13, 238);
+            this.progressBar1.Location = new System.Drawing.Point(172, 54);
             this.progressBar1.Name = "progressBar1";
-            this.progressBar1.Size = new System.Drawing.Size(383, 25);
+            this.progressBar1.Size = new System.Drawing.Size(210, 25);
             this.progressBar1.TabIndex = 14;
-            // 
-            // groupBox4
-            // 
-            this.groupBox4.Controls.Add(this.Radio_Ethernet);
-            this.groupBox4.Controls.Add(this.Radio_SerialPort);
-            this.groupBox4.Location = new System.Drawing.Point(349, 85);
-            this.groupBox4.Name = "groupBox4";
-            this.groupBox4.Size = new System.Drawing.Size(161, 65);
-            this.groupBox4.TabIndex = 17;
-            this.groupBox4.TabStop = false;
-            this.groupBox4.Text = "Режим";
-            // 
-            // Radio_Ethernet
-            // 
-            this.Radio_Ethernet.AutoSize = true;
-            this.Radio_Ethernet.Location = new System.Drawing.Point(7, 37);
-            this.Radio_Ethernet.Name = "Radio_Ethernet";
-            this.Radio_Ethernet.Size = new System.Drawing.Size(65, 17);
-            this.Radio_Ethernet.TabIndex = 1;
-            this.Radio_Ethernet.TabStop = true;
-            this.Radio_Ethernet.Text = "Ethernet";
-            this.Radio_Ethernet.UseVisualStyleBackColor = true;
-            // 
-            // Radio_SerialPort
-            // 
-            this.Radio_SerialPort.AutoSize = true;
-            this.Radio_SerialPort.Location = new System.Drawing.Point(7, 20);
-            this.Radio_SerialPort.Name = "Radio_SerialPort";
-            this.Radio_SerialPort.Size = new System.Drawing.Size(102, 17);
-            this.Radio_SerialPort.TabIndex = 0;
-            this.Radio_SerialPort.TabStop = true;
-            this.Radio_SerialPort.Text = "Серийный порт";
-            this.Radio_SerialPort.UseVisualStyleBackColor = true;
-            // 
-            // GBox_Ethernet
-            // 
-            this.GBox_Ethernet.Controls.Add(this.panel16);
-            this.GBox_Ethernet.Controls.Add(this.panel17);
-            this.GBox_Ethernet.Controls.Add(this.panel18);
-            this.GBox_Ethernet.Location = new System.Drawing.Point(12, 85);
-            this.GBox_Ethernet.Name = "GBox_Ethernet";
-            this.GBox_Ethernet.Size = new System.Drawing.Size(334, 65);
-            this.GBox_Ethernet.TabIndex = 16;
-            this.GBox_Ethernet.TabStop = false;
-            this.GBox_Ethernet.Text = "Ethernet";
-            // 
-            // panel16
-            // 
-            this.panel16.Controls.Add(this.TBox_Port);
-            this.panel16.Controls.Add(this.label16);
-            this.panel16.Location = new System.Drawing.Point(175, 19);
-            this.panel16.Name = "panel16";
-            this.panel16.Size = new System.Drawing.Size(75, 43);
-            this.panel16.TabIndex = 3;
-            // 
-            // TBox_Port
-            // 
-            this.TBox_Port.Location = new System.Drawing.Point(6, 17);
-            this.TBox_Port.Name = "TBox_Port";
-            this.TBox_Port.Size = new System.Drawing.Size(66, 20);
-            this.TBox_Port.TabIndex = 1;
-            // 
-            // label16
-            // 
-            this.label16.AutoSize = true;
-            this.label16.Location = new System.Drawing.Point(3, 0);
-            this.label16.Name = "label16";
-            this.label16.Size = new System.Drawing.Size(32, 13);
-            this.label16.TabIndex = 0;
-            this.label16.Text = "Порт";
-            // 
-            // panel17
-            // 
-            this.panel17.Controls.Add(this.TBox_Timeout);
-            this.panel17.Controls.Add(this.label17);
-            this.panel17.Location = new System.Drawing.Point(253, 19);
-            this.panel17.Name = "panel17";
-            this.panel17.Size = new System.Drawing.Size(75, 43);
-            this.panel17.TabIndex = 2;
-            // 
-            // TBox_Timeout
-            // 
-            this.TBox_Timeout.Location = new System.Drawing.Point(6, 17);
-            this.TBox_Timeout.Name = "TBox_Timeout";
-            this.TBox_Timeout.Size = new System.Drawing.Size(66, 20);
-            this.TBox_Timeout.TabIndex = 2;
-            // 
-            // label17
-            // 
-            this.label17.AutoSize = true;
-            this.label17.Location = new System.Drawing.Point(3, 0);
-            this.label17.Name = "label17";
-            this.label17.Size = new System.Drawing.Size(74, 13);
-            this.label17.TabIndex = 0;
-            this.label17.Text = "Таймаут, сек";
-            // 
-            // panel18
-            // 
-            this.panel18.Controls.Add(this.TBox_IP);
-            this.panel18.Controls.Add(this.label18);
-            this.panel18.Location = new System.Drawing.Point(0, 19);
-            this.panel18.Name = "panel18";
-            this.panel18.Size = new System.Drawing.Size(172, 43);
-            this.panel18.TabIndex = 0;
-            // 
-            // TBox_IP
-            // 
-            this.TBox_IP.Location = new System.Drawing.Point(6, 17);
-            this.TBox_IP.Name = "TBox_IP";
-            this.TBox_IP.Size = new System.Drawing.Size(163, 20);
-            this.TBox_IP.TabIndex = 1;
-            // 
-            // label18
-            // 
-            this.label18.AutoSize = true;
-            this.label18.Location = new System.Drawing.Point(3, 0);
-            this.label18.Name = "label18";
-            this.label18.Size = new System.Drawing.Size(50, 13);
-            this.label18.TabIndex = 0;
-            this.label18.Text = "IP адрес";
             // 
             // GBox_Serial
             // 
@@ -647,15 +511,11 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(522, 467);
-            this.Controls.Add(this.groupBox4);
-            this.Controls.Add(this.GBox_Ethernet);
+            this.ClientSize = new System.Drawing.Size(518, 386);
             this.Controls.Add(this.GBox_Serial);
-            this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.TextBox_Log);
-            this.Controls.Add(this.Button_Connect);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
@@ -676,15 +536,6 @@
             this.panel4.PerformLayout();
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
-            this.groupBox4.ResumeLayout(false);
-            this.groupBox4.PerformLayout();
-            this.GBox_Ethernet.ResumeLayout(false);
-            this.panel16.ResumeLayout(false);
-            this.panel16.PerformLayout();
-            this.panel17.ResumeLayout(false);
-            this.panel17.PerformLayout();
-            this.panel18.ResumeLayout(false);
-            this.panel18.PerformLayout();
             this.GBox_Serial.ResumeLayout(false);
             this.panel11.ResumeLayout(false);
             this.panel11.PerformLayout();
@@ -727,19 +578,6 @@
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Label Label_ConfPath;
         private System.Windows.Forms.ProgressBar progressBar1;
-        private System.Windows.Forms.GroupBox groupBox4;
-        private System.Windows.Forms.RadioButton Radio_Ethernet;
-        private System.Windows.Forms.RadioButton Radio_SerialPort;
-        private System.Windows.Forms.GroupBox GBox_Ethernet;
-        private System.Windows.Forms.Panel panel16;
-        private System.Windows.Forms.TextBox TBox_Port;
-        private System.Windows.Forms.Label label16;
-        private System.Windows.Forms.Panel panel17;
-        private System.Windows.Forms.TextBox TBox_Timeout;
-        private System.Windows.Forms.Label label17;
-        private System.Windows.Forms.Panel panel18;
-        private System.Windows.Forms.TextBox TBox_IP;
-        private System.Windows.Forms.Label label18;
         private System.Windows.Forms.GroupBox GBox_Serial;
         private System.Windows.Forms.Panel panel11;
         private System.Windows.Forms.ComboBox CBox_Parity;
