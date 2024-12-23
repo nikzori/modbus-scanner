@@ -49,8 +49,8 @@
             this.Button_LoadConfig = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
             this.Label_ConfPath = new System.Windows.Forms.Label();
-            this.button1 = new System.Windows.Forms.Button();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.button1 = new System.Windows.Forms.Button();
             this.GBox_Serial = new System.Windows.Forms.GroupBox();
             this.panel11 = new System.Windows.Forms.Panel();
             this.CBox_Parity = new System.Windows.Forms.ComboBox();
@@ -105,12 +105,12 @@
             // 
             // TextBox_Log
             // 
-            this.TextBox_Log.Location = new System.Drawing.Point(12, 192);
+            this.TextBox_Log.Location = new System.Drawing.Point(12, 177);
             this.TextBox_Log.Multiline = true;
             this.TextBox_Log.Name = "TextBox_Log";
             this.TextBox_Log.ReadOnly = true;
             this.TextBox_Log.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.TextBox_Log.Size = new System.Drawing.Size(498, 118);
+            this.TextBox_Log.Size = new System.Drawing.Size(498, 133);
             this.TextBox_Log.TabIndex = 1;
             // 
             // groupBox2
@@ -285,6 +285,13 @@
             this.Label_ConfPath.Text = "Файл не выбран.";
             this.Label_ConfPath.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
+            // progressBar1
+            // 
+            this.progressBar1.Location = new System.Drawing.Point(172, 54);
+            this.progressBar1.Name = "progressBar1";
+            this.progressBar1.Size = new System.Drawing.Size(210, 25);
+            this.progressBar1.TabIndex = 14;
+            // 
             // button1
             // 
             this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
@@ -296,13 +303,6 @@
             this.button1.Text = "Папка";
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.LoadFolder);
-            // 
-            // progressBar1
-            // 
-            this.progressBar1.Location = new System.Drawing.Point(172, 54);
-            this.progressBar1.Name = "progressBar1";
-            this.progressBar1.Size = new System.Drawing.Size(210, 25);
-            this.progressBar1.TabIndex = 14;
             // 
             // GBox_Serial
             // 

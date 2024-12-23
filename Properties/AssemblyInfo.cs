@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("Gidrolock Modbus Scanner")]
 [assembly: AssemblyDescription("A collection of Modbus tools.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Gidroresurs LLC")]
+[assembly: AssemblyCompany("nikzori")]
 [assembly: AssemblyProduct("Gidrolock Modbus Scanner")]
 [assembly: AssemblyCopyright("Copyright ©  2024")]
 [assembly: AssemblyTrademark("")]
@@ -30,6 +30,6 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("0.0.0.8")]
-[assembly: AssemblyFileVersion("0.0.0.8")]
+[assembly: AssemblyVersion("0.9.0.0")]
+[assembly: AssemblyFileVersion("0.9.0.0")]
 [assembly: NeutralResourcesLanguage("en")]

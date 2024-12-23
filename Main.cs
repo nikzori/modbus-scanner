@@ -124,7 +124,14 @@ namespace Gidrolock_Modbus_Scanner
             ofd.InitialDirectory = Application.StartupPath + "\\Configs";
             path = defaultPath;
             UpdatePathLabel();
+
+            /* - Version Check - */
+            System.Reflection.Assembly assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            System.Diagnostics.FileVersionInfo fvi = System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location);
+            string version = fvi.FileVersion;
+            Console.WriteLine("Version: " + version);
         }
+
         void UpdatePathLabel()
         {
             Label_ConfPath.Text = path;
@@ -531,7 +538,7 @@ namespace Gidrolock_Modbus_Scanner
         void AddLog(string message)
         {
             dateTime = DateTime.Now;
-            TextBox_Log.Invoke((MethodInvoker)delegate { TextBox_Log.AppendText(Environment.NewLine + "[" + dateTime.Hour + ":" + dateTime.Minute + ":" + dateTime.Second + "] " + message); });
+            TextBox_Log.Invoke((MethodInvoker)delegate { TextBox_Log.AppendText(Environment.NewLine + "[" + dateTime.Hour.ToString().PadLeft(2, '0') + ":" + dateTime.Minute.ToString().PadLeft(2, '0') + ":" + dateTime.Second.ToString().PadLeft(2, '0') + "] " + message); });
         }
 
         private async void Button_SendCommand_Click(object sender, EventArgs e)
