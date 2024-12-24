@@ -231,8 +231,10 @@ namespace Gidrolock_Modbus_Scanner
                         case ("bool"):
                             if (entries[activeEntryIndex].labels is null || entries[activeEntryIndex].labels.Count == 0) // assume that no labels = 1 entry
                             {
-                                if (entries[activeEntryIndex].valueParse is null || entries[activeEntryIndex].valueParse.Keys.Count == 0)
+                                //no valueParse keys
+                                if (entries[activeEntryIndex].valueParse is null || entries[activeEntryIndex].valueParse.Keys.Count == 0) 
                                 {
+                                    // coil combobox
                                     if (entries[activeEntryIndex].registerType == RegisterType.Coil)
                                     {
                                         DGV_Device.Invoke((MethodInvoker)delegate
@@ -241,6 +243,7 @@ namespace Gidrolock_Modbus_Scanner
                                             cbc.Value = e.Data[0] > 0x00 ? cbc.Items[1] : cbc.Items[0];
                                         });
                                     }
+                                    // discrete inputs
                                     else
                                     {
                                         DGV_Device.Invoke((MethodInvoker)delegate
@@ -266,7 +269,7 @@ namespace Gidrolock_Modbus_Scanner
                                         {
                                             DGV_Device.Invoke((MethodInvoker)delegate
                                             {
-                                                DGV_Device.Rows[activeDGVIndex].Cells[2].Value = e.Data[0] > 0x00 ? "true" : "false";
+                                                DGV_Device.Rows[activeDGVIndex].Cells[2].Value = e.Data[0] > 0x00 ? "True" : "False";
                                             });
                                         }
                                     }
@@ -290,7 +293,7 @@ namespace Gidrolock_Modbus_Scanner
                                     {
                                         DGV_Device.Invoke((MethodInvoker)delegate
                                         {
-                                            var cbc = DGV_Device.Rows[activeEntryIndex].Cells[2] as DataGridViewComboBoxCell;
+                                            var cbc = DGV_Device.Rows[activeDGVIndex].Cells[2] as DataGridViewComboBoxCell;
                                             cbc.Value = e.Data[0] > 0x00 ? cbc.Items[1] : cbc.Items[0];
                                         });
                                     }
@@ -298,7 +301,7 @@ namespace Gidrolock_Modbus_Scanner
                                     {
                                         DGV_Device.Invoke((MethodInvoker)delegate
                                         {
-                                            DGV_Device.Rows[activeEntryIndex].Cells[2].Value = e.Data[0] > 0x00 ? "true": "false";
+                                            DGV_Device.Rows[activeDGVIndex].Cells[2].Value = e.Data[0] > 0x00 ? "true": "false";
                                         });
                                     }
                                     activeDGVIndex++;
