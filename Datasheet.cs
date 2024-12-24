@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Remoting.Messaging;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -47,18 +48,29 @@ namespace Gidrolock_Modbus_Scanner
 
             DGV_Device.Columns.Add("#", "#");
             DGV_Device.Columns[0].FillWeight = 20;
+            DGV_Device.Columns[0].ReadOnly = true;
             DGV_Device.Columns.Add("Name", "Имя");
             DGV_Device.Columns[1].FillWeight = 40;
+            DGV_Device.Columns[1].ReadOnly = true;
             DGV_Device.Columns.Add("Value", "Значение");
             DGV_Device.Columns[2].FillWeight = 60;
             DGV_Device.Columns.Add("Address", "Адрес");
             DGV_Device.Columns[3].FillWeight = 30;
+            DGV_Device.Columns[3].ReadOnly = true;
             DGV_Device.Columns.Add(new DataGridViewCheckBoxColumn());
             DGV_Device.Columns[4].Name = "Опрос";
             DGV_Device.Columns[4].FillWeight = 20;
             DGV_Device.Columns[4].ValueType = typeof(bool);
 
             int rowCount = 0;
+
+            DGV_Device.CellEndEdit += (o, e) =>
+            {
+                if (e.ColumnIndex == 2)
+                {
+
+                }
+            };
 
             foreach (Entry e in entries)
             {
@@ -68,6 +80,8 @@ namespace Gidrolock_Modbus_Scanner
                     if ((e.length == 2 && e.dataType == "uint32") || e.dataType == "string")
                     {
                         DGV_Device.Rows.Add(rowCount, e.name, "", e.address);
+                        if (e.registerType == RegisterType.Input || e.registerType == RegisterType.Discrete)
+                            DGV_Device.Rows[rowCount].Cells[2].ReadOnly = true;
                         rowCount++;
                     }
                     else
@@ -77,6 +91,17 @@ namespace Gidrolock_Modbus_Scanner
                             if (i < e.labels.Count)
                                 DGV_Device.Rows.Add(rowCount, e.name + ": " + e.labels[i], "", e.address + i);
                             else DGV_Device.Rows.Add(rowCount, e.address + i, "", e.address + i);
+
+                            if (i != 0) // Hide rightmost cells for extra registers in the Entry
+                            {
+                                DGV_Device.Rows[rowCount].Cells[4] = new DataGridViewTextBoxCell();
+                                DGV_Device.Rows[rowCount].Cells[4].Value = "";
+                                DGV_Device.Rows[rowCount].Cells[4].Style.ForeColor = Color.DarkGray;
+                                DGV_Device.Rows[rowCount].Cells[4].Style.BackColor = Color.DarkGray;
+                                DGV_Device.Rows[rowCount].Cells[4].ReadOnly = true;
+                            }
+                            if (e.registerType == RegisterType.Input || e.registerType == RegisterType.Discrete)
+                                DGV_Device.Rows[rowCount].Cells[2].ReadOnly = true;
                             rowCount++;
                         }
                     }
@@ -85,20 +110,35 @@ namespace Gidrolock_Modbus_Scanner
                 else
                 {
                     DGV_Device.Rows.Add(rowCount, e.name, "", e.address);
+                    if (e.registerType == RegisterType.Input || e.registerType == RegisterType.Discrete)
+                        DGV_Device.Rows[rowCount].Cells[2].ReadOnly = true;
+                    if (e.registerType == RegisterType.Coil)
+                    {
+                        DGV_Device.Rows[rowCount].Cells[2] = new DataGridViewComboBoxCell();
+                        var cbc = DGV_Device.Rows[rowCount].Cells[2] as DataGridViewComboBoxCell;
+                        if (e.valueParse != null)
+                        {
+                            if (e.valueParse.ContainsKey("false"))
+                                cbc.Items.Add(e.valueParse["false"]);
+                            if (e.valueParse.ContainsKey("true"))
+                                cbc.Items.Add(e.valueParse["true"]);
+                        }
+                        else
+                        {
+                            cbc.Items.Add("False");
+                            cbc.Items.Add("True");
+                        }
+                    }
                     rowCount++;
                 }
             }
             foreach (DataGridViewRow row in DGV_Device.Rows)
             {
                 row.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                if (row.Cells[2] is DataGridViewComboBoxCell)
+                    row.Cells[2].Style.Alignment = DataGridViewContentAlignment.MiddleLeft;
             }
-            /*
-            for (int i = 0; i < entries.Count; i++)
-            {
-                DGV_Device.Rows.Add(i.ToString(), entries[i].name, "", entries[i].address);
-                DGV_Device.Rows[i].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            }
-            */
+
             foreach (DataGridViewColumn column in DGV_Device.Columns)
                 column.SortMode = DataGridViewColumnSortMode.NotSortable; // disabling sorting for now
 
@@ -121,8 +161,9 @@ namespace Gidrolock_Modbus_Scanner
                         DataGridViewCheckBoxCell chbox = DGV_Device.Rows[activeDGVIndex].Cells[4] as DataGridViewCheckBoxCell;
                         if (Convert.ToBoolean(chbox.Value))
                         {
-                            Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
-                            await PollForEntry(entries[activeEntryIndex]).ContinueWith(_ => Task.Delay(150));
+                            //Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
+                            await PollForEntry(entries[activeEntryIndex]);
+                            Thread.Sleep(150);
                         }
                         else //need to skip multiple dgv entries without accidentaly skipping entries
                         {
@@ -155,20 +196,22 @@ namespace Gidrolock_Modbus_Scanner
         public async Task PollForEntry(Entry entry)
         {
             byte[] message = new byte[8];
-            var send = await Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+            var send = Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
             isAwaitingResponse = true;
 
-            Task delay = Task.WhenAny(Task.Delay(timeout), Task.Run(() => { while (isAwaitingResponse) { } return; })).ContinueWith((t) =>
+            Task delay = Task.WhenAny(Task.Delay(timeout), Task.Run(() => { while (isAwaitingResponse) { } return true; })).ContinueWith((t) =>
             {
                 if (isAwaitingResponse)
                 {
                     Console.WriteLine("Response timed out.");
                     isAwaitingResponse = false;
                 }
+                return false;
             });
 
 
             await delay;
+
         }
 
         void PublishResponse(object sender, ModbusResponseEventArgs e)
@@ -189,14 +232,43 @@ namespace Gidrolock_Modbus_Scanner
                             if (entries[activeEntryIndex].labels is null || entries[activeEntryIndex].labels.Count == 0) // assume that no labels = 1 entry
                             {
                                 if (entries[activeEntryIndex].valueParse is null || entries[activeEntryIndex].valueParse.Keys.Count == 0)
-                                    DGV_Device.Rows[activeEntryIndex].Cells[2].Value = e.Data[0] > 0x00 ? "true" : "false";
+                                {
+                                    if (entries[activeEntryIndex].registerType == RegisterType.Coil)
+                                    {
+                                        DGV_Device.Invoke((MethodInvoker)delegate
+                                        {
+                                            var cbc = DGV_Device.Rows[activeDGVIndex].Cells[2] as DataGridViewComboBoxCell;
+                                            cbc.Value = e.Data[0] > 0x00 ? cbc.Items[1] : cbc.Items[0];
+                                        });
+                                    }
+                                    else
+                                    {
+                                        DGV_Device.Invoke((MethodInvoker)delegate
+                                        {
+                                            DGV_Device.Rows[activeDGVIndex].Cells[2].Value = e.Data[0] > 0x00 ? "true" : "false";
+                                        });
+                                    }
+                                }
                                 else
                                 {
-                                    try { DGV_Device.Rows[activeEntryIndex].Cells[2].Value = e.Data[0] > 0x00 ? entries[activeEntryIndex].valueParse["true"] : entries[activeEntryIndex].valueParse["false"]; }
+                                    try { DGV_Device.Rows[activeDGVIndex].Cells[2].Value = e.Data[0] > 0x00 ? entries[activeEntryIndex].valueParse["true"] : entries[activeEntryIndex].valueParse["false"]; }
                                     catch (Exception err)
                                     {
-                                        MessageBox.Show("Value parsing error for bool entry: " + entries[activeEntryIndex].name + "; " + err.Message);
-                                        DGV_Device.Rows[activeEntryIndex].Cells[2].Value = e.Data[0] > 0x00 ? "true" : "false";
+                                        if (entries[activeEntryIndex].registerType == RegisterType.Coil)
+                                        {
+                                            DGV_Device.Invoke((MethodInvoker)delegate
+                                            {
+                                                var cbc = DGV_Device.Rows[activeDGVIndex].Cells[2] as DataGridViewComboBoxCell;
+                                                cbc.Value = e.Data[0] > 0x00 ? cbc.Items[1] : cbc.Items[0];
+                                            });
+                                        }
+                                        else
+                                        {
+                                            DGV_Device.Invoke((MethodInvoker)delegate
+                                            {
+                                                DGV_Device.Rows[activeDGVIndex].Cells[2].Value = e.Data[0] > 0x00 ? "true" : "false";
+                                            });
+                                        }
                                     }
                                 }
                                 activeDGVIndex++;
@@ -214,7 +286,21 @@ namespace Gidrolock_Modbus_Scanner
                                 }
                                 for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
                                 {
-                                    DGV_Device.Rows[activeDGVIndex].Cells[2].Value = values[i];
+                                    if (entries[activeEntryIndex].registerType == RegisterType.Coil)
+                                    {
+                                        DGV_Device.Invoke((MethodInvoker)delegate
+                                        {
+                                            var cbc = DGV_Device.Rows[activeEntryIndex].Cells[2] as DataGridViewComboBoxCell;
+                                            cbc.Value = e.Data[0] > 0x00 ? cbc.Items[1] : cbc.Items[0];
+                                        });
+                                    }
+                                    else
+                                    {
+                                        DGV_Device.Invoke((MethodInvoker)delegate
+                                        {
+                                            DGV_Device.Rows[activeEntryIndex].Cells[2].Value = e.Data[0] > 0x00 ? "true": "false";
+                                        });
+                                    }
                                     activeDGVIndex++;
                                 }
                             }
@@ -227,7 +313,7 @@ namespace Gidrolock_Modbus_Scanner
                                 {
                                     //Array.Reverse(e.Data); // this was necessary, but something changed, idk
 
-                                    Console.WriteLine("ushort parsed value: " + value);
+                                    //Console.WriteLine("ushort parsed value: " + value);
                                     DGV_Device.Rows[activeDGVIndex].Cells[2].Value = value;
                                 }
                                 else
@@ -249,15 +335,19 @@ namespace Gidrolock_Modbus_Scanner
                                 try
                                 {
                                     List<ushort> values = new List<ushort>();
-                                    for (int i = 0; i < dbc - 2; i += 2)
+                                    for (int i = 0; i < dbc; i += 2)
                                     {
                                         ushort s = BitConverter.ToUInt16(e.Data, i);
-                                        Console.WriteLine("ushort value: " + s);
                                         values.Add(s);
                                     }
+                                    //Console.WriteLine("ushort values count: " + values.Count);
+                                    //Console.WriteLine("entity labels count: " + entries[activeEntryIndex].labels.Count);
                                     for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
                                     {
-                                        DGV_Device.Rows[activeDGVIndex].Cells[2].Value = values[i];
+                                        DGV_Device.Invoke((MethodInvoker)delegate
+                                        {
+                                            DGV_Device.Rows[activeDGVIndex].Cells[2].Value = values[i];
+                                        });
                                         activeDGVIndex++;
                                     }
                                 }
@@ -300,9 +390,7 @@ namespace Gidrolock_Modbus_Scanner
                     //MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
                     port.DiscardInBuffer();
                 }
-                catch (Exception err) {
-                    MessageBox.Show(err.Message, "Publish response error");
-                }
+                catch (Exception err) { MessageBox.Show(err.Message, "Publish response error"); }
 
             }
             if (activeDGVIndex >= DGV_Device.Rows.Count)

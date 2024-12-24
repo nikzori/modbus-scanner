@@ -14,7 +14,6 @@ using System.IO;
 using Newtonsoft.Json;
 using System.Threading;
 
-
 namespace Gidrolock_Modbus_Scanner
 {
     public partial class App : Form
@@ -103,7 +102,7 @@ namespace Gidrolock_Modbus_Scanner
             CBox_Parity.Items.Add("Нечетн.");
             CBox_Parity.SelectedIndex = 0;
 
-            UpDown_RegLength.Value = 0;
+            UpDown_RegLength.Value = 1;
             /* TCP Setup */
             /*
             Radio_SerialPort.Checked = true;
@@ -176,11 +175,11 @@ namespace Gidrolock_Modbus_Scanner
             port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex];
             port.Parity = Parity.None;
             port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
-            port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
+            port.StopBits = (StopBits)CBox_StopBits.SelectedIndex; 
 
             port.ReadTimeout = 3000;
             port.WriteTimeout = 3000;
-
+            port.ReadBufferSize = 8192;
 
             message = new byte[255];
             port.Open();
@@ -191,7 +190,7 @@ namespace Gidrolock_Modbus_Scanner
             {
                 try
                 {
-                    await Modbus.ReadRegAsync(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
+                    Modbus.ReadRegAsync(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
                     isAwaitingResponse = true;
                     await Task.Delay(port.ReadTimeout).ContinueWith(_ =>
                     {
@@ -244,7 +243,7 @@ namespace Gidrolock_Modbus_Scanner
 
             port.ReadTimeout = 3000;
             port.WriteTimeout = 3000;
-
+            port.ReadBufferSize = 8192;
 
             message = new byte[255];
             port.Open();
@@ -556,7 +555,7 @@ namespace Gidrolock_Modbus_Scanner
 
             port.ReadTimeout = 3000;
             port.WriteTimeout = 3000;
-
+            port.ReadBufferSize = 8192;
 
             message = new byte[255];
             port.Open();
@@ -584,9 +583,9 @@ namespace Gidrolock_Modbus_Scanner
                         case (FunctionCode.WriteCoil):
                             Console.WriteLine("Trying to force single coil");
                             if (valueLower == "true" || valueLower == "1")
-                                await Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0xFF_00);
+                                Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0xFF_00);
                             else if (valueLower == "false" || valueLower == "0")
-                                await Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0x00_00);
+                                Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0x00_00);
                             else MessageBox.Show("Неподходящие значения для регистра типа Coil");
                             break;
                         case (FunctionCode.WriteRegister):
@@ -641,7 +640,7 @@ namespace Gidrolock_Modbus_Scanner
                             }
 
                             if (canWrite)
-                                await Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
+                                Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
                                         (ushort)value);
                             break;
                         default:
