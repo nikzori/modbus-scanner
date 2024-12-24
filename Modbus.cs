@@ -241,7 +241,7 @@ namespace Gidrolock_Modbus_Scanner
             {
                 byte[] message = new byte[port.BytesToRead];
                 port.Read(message, 0, port.BytesToRead);
-                Console.WriteLine("Incoming message: " + ByteArrayToString(message));
+                Console.WriteLine("Incoming message: " + ByteArrayToString(message, false));
                 if (message[1] <= 0x04) // read functions
                 {
                     Console.WriteLine("It's a read message");
@@ -263,7 +263,7 @@ namespace Gidrolock_Modbus_Scanner
             }
             catch (Exception err)
             {
-                MessageBox.Show(err.Message);
+                MessageBox.Show(err.Message, "Modbus message reception error");
             }
             port.DiscardInBuffer();
         }

@@ -122,8 +122,7 @@ namespace Gidrolock_Modbus_Scanner
                         if (Convert.ToBoolean(chbox.Value))
                         {
                             Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
-                            await PollForEntry(entries[activeEntryIndex]);
-                            await Task.Delay(150);
+                            await PollForEntry(entries[activeEntryIndex]).ContinueWith(_ => Task.Delay(150));
                         }
                         else //need to skip multiple dgv entries without accidentaly skipping entries
                         {
@@ -143,8 +142,6 @@ namespace Gidrolock_Modbus_Scanner
                             activeEntryIndex = 0;
                         if (activeDGVIndex >= DGV_Device.RowCount)
                             activeDGVIndex = 0;
-
-                        Console.WriteLine("entry index: " + activeEntryIndex + "; dgv index: " + activeDGVIndex);
                     }
                 }
             }
@@ -161,7 +158,7 @@ namespace Gidrolock_Modbus_Scanner
             var send = await Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
             isAwaitingResponse = true;
 
-            Task delay = Task.WhenAny(Task.Delay(timeout), Task.Run( () => { while (isAwaitingResponse) { } return; })).ContinueWith((t) =>
+            Task delay = Task.WhenAny(Task.Delay(timeout), Task.Run(() => { while (isAwaitingResponse) { } return; })).ContinueWith((t) =>
             {
                 if (isAwaitingResponse)
                 {
@@ -181,7 +178,7 @@ namespace Gidrolock_Modbus_Scanner
                 try
                 {
                     if (entries[activeEntryIndex].readOnce)
-                    { 
+                    {
                         DataGridViewCheckBoxCell chbox = DGV_Device.Rows[activeDGVIndex].Cells[4] as DataGridViewCheckBoxCell;
                         chbox.Value = false;
                     }
@@ -196,9 +193,9 @@ namespace Gidrolock_Modbus_Scanner
                                 else
                                 {
                                     try { DGV_Device.Rows[activeEntryIndex].Cells[2].Value = e.Data[0] > 0x00 ? entries[activeEntryIndex].valueParse["true"] : entries[activeEntryIndex].valueParse["false"]; }
-                                    catch
+                                    catch (Exception err)
                                     {
-                                        Console.WriteLine("Value parsing error for bool entry: " + entries[activeEntryIndex].name);
+                                        MessageBox.Show("Value parsing error for bool entry: " + entries[activeEntryIndex].name + "; " + err.Message);
                                         DGV_Device.Rows[activeEntryIndex].Cells[2].Value = e.Data[0] > 0x00 ? "true" : "false";
                                     }
                                 }
@@ -239,25 +236,37 @@ namespace Gidrolock_Modbus_Scanner
                                     {
                                         DGV_Device.Rows[activeDGVIndex].Cells[2].Value = entries[activeEntryIndex].valueParse[value.ToString()];
                                     }
-                                    catch { DGV_Device.Rows[activeDGVIndex].Cells[2].Value = value; Console.WriteLine("Error parsing uint value at address: " + entries[activeEntryIndex].address); }
+                                    catch (Exception err)
+                                    {
+                                        DGV_Device.Rows[activeDGVIndex].Cells[2].Value = value; MessageBox.Show("Error parsing uint value at address: " + entries[activeEntryIndex].address + "; " + err.Message, "uint16 parse");
+                                    }
                                 }
 
                                 activeDGVIndex++;
                             }
                             else // value group
                             {
-                                List<ushort> values = new List<ushort>();
-                                for (int i = 0; i < dbc; i += 2)
+                                try
                                 {
-                                    ushort s = BitConverter.ToUInt16(e.Data, i);
-                                    values.Add(s);
+                                    List<ushort> values = new List<ushort>();
+                                    for (int i = 0; i < dbc - 2; i += 2)
+                                    {
+                                        ushort s = BitConverter.ToUInt16(e.Data, i);
+                                        Console.WriteLine("ushort value: " + s);
+                                        values.Add(s);
+                                    }
+                                    for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
+                                    {
+                                        DGV_Device.Rows[activeDGVIndex].Cells[2].Value = values[i];
+                                        activeDGVIndex++;
+                                    }
                                 }
-                                for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
+                                catch (Exception err)
                                 {
-                                    DGV_Device.Rows[activeDGVIndex].Cells[2].Value = values[i];
-                                    activeDGVIndex++;
+                                    DGV_Device.Rows[activeDGVIndex].Cells[2].Value = value; MessageBox.Show("Error parsing uint value at address: " + entries[activeEntryIndex].address + "; " + err.Message, "uint16 group req parse");
                                 }
                             }
+
 
                             break;
                         case ("uint32"):
@@ -291,7 +300,9 @@ namespace Gidrolock_Modbus_Scanner
                     //MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
                     port.DiscardInBuffer();
                 }
-                catch { return; }
+                catch (Exception err) {
+                    MessageBox.Show(err.Message, "Publish response error");
+                }
 
             }
             if (activeDGVIndex >= DGV_Device.Rows.Count)
