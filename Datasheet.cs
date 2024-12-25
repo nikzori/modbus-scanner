@@ -68,7 +68,8 @@ namespace Gidrolock_Modbus_Scanner
             {
                 if (e.ColumnIndex == 2)
                 {
-
+                    int y = e.RowIndex;
+                    Console.WriteLine("Row " + y + " current value: " + DGV_Device.Rows[y].Cells[2].Value.ToString());
                 }
             };
 
@@ -347,10 +348,17 @@ namespace Gidrolock_Modbus_Scanner
                                     //Console.WriteLine("entity labels count: " + entries[activeEntryIndex].labels.Count);
                                     for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
                                     {
-                                        DGV_Device.Invoke((MethodInvoker)delegate
+                                        if (device.entries[activeEntryIndex].valueParse != null)
+                                        {
+                                            DGV_Device.Invoke((MethodInvoker)delegate
+                                            {
+                                                DGV_Device.Rows[activeDGVIndex].Cells[2].Value = device.entries[activeEntryIndex].valueParse[values[i].ToString()];
+                                            });
+                                        }
+                                        else
                                         {
                                             DGV_Device.Rows[activeDGVIndex].Cells[2].Value = values[i];
-                                        });
+                                        }
                                         activeDGVIndex++;
                                     }
                                 }

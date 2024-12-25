@@ -95,7 +95,7 @@
             // 
             this.Button_Connect.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.Button_Connect.Location = new System.Drawing.Point(388, 54);
+            this.Button_Connect.Location = new System.Drawing.Point(388, 69);
             this.Button_Connect.Name = "Button_Connect";
             this.Button_Connect.Size = new System.Drawing.Size(104, 25);
             this.Button_Connect.TabIndex = 4;
@@ -105,7 +105,7 @@
             // 
             // TextBox_Log
             // 
-            this.TextBox_Log.Location = new System.Drawing.Point(12, 177);
+            this.TextBox_Log.Location = new System.Drawing.Point(12, 194);
             this.TextBox_Log.Multiline = true;
             this.TextBox_Log.Name = "TextBox_Log";
             this.TextBox_Log.ReadOnly = true;
@@ -120,7 +120,7 @@
             this.groupBox2.Controls.Add(this.Button_SendCommand);
             this.groupBox2.Controls.Add(this.panel3);
             this.groupBox2.Controls.Add(this.panel4);
-            this.groupBox2.Location = new System.Drawing.Point(12, 316);
+            this.groupBox2.Location = new System.Drawing.Point(12, 333);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(498, 63);
             this.groupBox2.TabIndex = 5;
@@ -253,7 +253,7 @@
             // 
             this.Button_LoadConfig.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.Button_LoadConfig.Location = new System.Drawing.Point(89, 54);
+            this.Button_LoadConfig.Location = new System.Drawing.Point(89, 69);
             this.Button_LoadConfig.Name = "Button_LoadConfig";
             this.Button_LoadConfig.Size = new System.Drawing.Size(77, 25);
             this.Button_LoadConfig.TabIndex = 11;
@@ -271,7 +271,7 @@
             this.groupBox1.Controls.Add(this.Button_Connect);
             this.groupBox1.Location = new System.Drawing.Point(12, 85);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(498, 86);
+            this.groupBox1.Size = new System.Drawing.Size(498, 103);
             this.groupBox1.TabIndex = 13;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Конфигурация";
@@ -280,14 +280,13 @@
             // 
             this.Label_ConfPath.Location = new System.Drawing.Point(6, 29);
             this.Label_ConfPath.Name = "Label_ConfPath";
-            this.Label_ConfPath.Size = new System.Drawing.Size(480, 22);
+            this.Label_ConfPath.Size = new System.Drawing.Size(480, 37);
             this.Label_ConfPath.TabIndex = 14;
             this.Label_ConfPath.Text = "Файл не выбран.";
-            this.Label_ConfPath.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // progressBar1
             // 
-            this.progressBar1.Location = new System.Drawing.Point(172, 54);
+            this.progressBar1.Location = new System.Drawing.Point(172, 69);
             this.progressBar1.Name = "progressBar1";
             this.progressBar1.Size = new System.Drawing.Size(210, 25);
             this.progressBar1.TabIndex = 14;
@@ -296,7 +295,7 @@
             // 
             this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.button1.Location = new System.Drawing.Point(6, 54);
+            this.button1.Location = new System.Drawing.Point(6, 69);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(77, 25);
             this.button1.TabIndex = 13;
@@ -511,7 +510,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(518, 386);
+            this.ClientSize = new System.Drawing.Size(518, 404);
             this.Controls.Add(this.GBox_Serial);
             this.Controls.Add(this.groupBox1);
             this.Controls.Add(this.groupBox2);
