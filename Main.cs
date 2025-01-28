@@ -319,10 +319,10 @@ namespace Gidrolock_Modbus_Scanner
                     } // all configs are sorted out, we can poll for each checkEntry 
                 }
                 // setup event listener
-                byte[] message = null;
+                ModbusResponseEventArgs message = null;
                 Modbus.ResponseReceived += (sndr, msg) =>
                 {
-                    message = msg.Message;
+                    message = msg;
                 };
 
                 foreach (CheckEntry ce in juju.Keys)
@@ -332,14 +332,10 @@ namespace Gidrolock_Modbus_Scanner
                     while (message is null) // wait for response to arrive
                         Thread.Sleep(10);
 
-                    if (message[1] > 0x10) // checking for exception code
-                        continue;
-                    else
+                    if (message.Status != ModbusStatus.Error) // error check
                     {
                         // get pure data
-                        byte[] data = new byte[message[2]];
-                        for (int i = 0; i < data.Length; i++)
-                            data[i] = message[i + 3];
+                        byte[] data = message.Data;
 
                         if (ce.dataType == "string")
                         {
@@ -422,39 +418,8 @@ namespace Gidrolock_Modbus_Scanner
                 progressBar1.Value = 100;
             }
 
-            /*
-            if (Radio_SerialPort.Checked)
-                await ReadRegisterAsync(FunctionCode.InputRegister, 200, 6);
-            //else EthernetParse();
-            */
         }
-        /*
-        async void EthernetParse()
-        {
-            string ipText = TBox_IP.Text;
-            string portText = TBox_Port.Text;
-
-            Regex ip = new Regex(@"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b");
-            Regex port = new Regex(@"\d");
-
-            if (!ip.IsMatch(ipText))
-                MessageBox.Show("Неправильный формат IP-адреса.");
-            else if (!port.IsMatch(portText))
-                MessageBox.Show("Неправильный формат TCP-порта.");
-            else
-            {
-                int portParsed = Int32.Parse(portText);
-                await socket.ConnectAsync(ipText, portParsed);
-                byte[] data = new byte[8];
-                Modbus.BuildReadMessage(0x1E, 0x03, 128, 1, ref data);
-                AddLog("Sending to " + ipText + ":" + portText + ":" + Modbus.ByteArrayToString(data));
-
-                // set up an event listener to receive the response
-                await SocketDataTransfer(data);
-            }
-
-        }
-        */
+        
         void CBox_Ports_Click(object sender, EventArgs e)
         {
             CBox_Ports.Items.Clear();

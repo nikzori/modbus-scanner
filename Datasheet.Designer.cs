@@ -34,10 +34,8 @@
             this.Label_DeviceName = new System.Windows.Forms.Label();
             this.Label_Description = new System.Windows.Forms.Label();
             this.Button_StartStop = new System.Windows.Forms.Button();
-            this.Panel_Device = new System.Windows.Forms.Panel();
-            this.PD_Scrollbar = new System.Windows.Forms.VScrollBar();
             this.label1 = new System.Windows.Forms.Label();
-            this.Panel_Device.SuspendLayout();
+            this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this.SuspendLayout();
             // 
             // Label_DeviceNameLabel
@@ -87,37 +85,31 @@
             this.Button_StartStop.UseVisualStyleBackColor = true;
             this.Button_StartStop.Click += new System.EventHandler(this.Button_StartStop_Click);
             // 
-            // Panel_Device
-            // 
-            this.Panel_Device.Controls.Add(this.PD_Scrollbar);
-            this.Panel_Device.Location = new System.Drawing.Point(13, 77);
-            this.Panel_Device.Name = "Panel_Device";
-            this.Panel_Device.Size = new System.Drawing.Size(567, 411);
-            this.Panel_Device.TabIndex = 6;
-            // 
-            // PD_Scrollbar
-            // 
-            this.PD_Scrollbar.Location = new System.Drawing.Point(549, 0);
-            this.PD_Scrollbar.Name = "PD_Scrollbar";
-            this.PD_Scrollbar.Size = new System.Drawing.Size(17, 440);
-            this.PD_Scrollbar.TabIndex = 0;
-            // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(13, 64);
+            this.label1.Location = new System.Drawing.Point(33, 64);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(14, 13);
             this.label1.TabIndex = 7;
             this.label1.Text = "#";
+            // 
+            // flowLayoutPanel1
+            // 
+            this.flowLayoutPanel1.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
+            this.flowLayoutPanel1.Location = new System.Drawing.Point(16, 81);
+            this.flowLayoutPanel1.Name = "flowLayoutPanel1";
+            this.flowLayoutPanel1.Size = new System.Drawing.Size(564, 407);
+            this.flowLayoutPanel1.TabIndex = 8;
+            this.flowLayoutPanel1.WrapContents = false;
             // 
             // Datasheet
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(592, 500);
+            this.Controls.Add(this.flowLayoutPanel1);
             this.Controls.Add(this.label1);
-            this.Controls.Add(this.Panel_Device);
             this.Controls.Add(this.Button_StartStop);
             this.Controls.Add(this.Label_Description);
             this.Controls.Add(this.Label_DeviceName);
@@ -126,7 +118,6 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Datasheet";
             this.Text = "Datasheet";
-            this.Panel_Device.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -138,8 +129,7 @@
         private System.Windows.Forms.Label Label_DeviceName;
         private System.Windows.Forms.Label Label_Description;
         private System.Windows.Forms.Button Button_StartStop;
-        private System.Windows.Forms.Panel Panel_Device;
-        private System.Windows.Forms.VScrollBar PD_Scrollbar;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.FlowLayoutPanel flowLayoutPanel1;
     }
 }

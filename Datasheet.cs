@@ -51,7 +51,7 @@ namespace Gidrolock_Modbus_Scanner
                     // multi-register entry check
                     if ((e.length == 2 && e.dataType == "uint32") || e.dataType == "string")
                     {
-                        entryRows.Add(new EntryRow(rowCount, e.address, e.name));
+                        entryRows.Add(new EntryRow(rowCount, e.address, e.name) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
                         rowCount++;
                     }
                     else
@@ -60,11 +60,11 @@ namespace Gidrolock_Modbus_Scanner
                         {
                             if (i < e.labels.Count)
                             {
-                                entryRows.Add(new EntryRow(rowCount, e.address + i, e.labels[i]));
+                                entryRows.Add(new EntryRow(rowCount, e.address + i, e.labels[i]) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
                             }
                             else
                             {
-                                entryRows.Add(new EntryRow(rowCount, e.address + i, (e.address + i).ToString()));
+                                entryRows.Add(new EntryRow(rowCount, e.address + i, (e.address + i).ToString()) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
                             }
                             rowCount++;
                         }
@@ -73,12 +73,17 @@ namespace Gidrolock_Modbus_Scanner
                 }
                 else
                 {
-                    entryRows.Add(new EntryRow(rowCount, e.address, e.name));
+                    entryRows.Add(new EntryRow(rowCount, e.address, e.name) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
                     rowCount++;
                 }
             }
-            foreach (EntryRow row in entryRows)
-                Panel_Device.Controls.Add(row);
+            for (int i = 0; i < entries.Count; i++)
+            {
+                flowLayoutPanel1.Controls.Add(entryRows[i]);
+                //entryRows[i].Location = new Point(13 + i, 77 + 20 * i);
+
+            }
+            this.Update();
             FormClosing += (s, e) => { closed = true; };
             Task.Run(() => AutoPollAsync());
         }
@@ -97,8 +102,21 @@ namespace Gidrolock_Modbus_Scanner
                         if (entryRows[activeDGVIndex].chboxPanel.chbox.Checked)
                         {
                             //Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
-                            await PollForEntry(entries[activeEntryIndex]);
-                            Thread.Sleep(150);
+                            Entry entry = entries[activeEntryIndex];
+                            Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+                            isAwaitingResponse = true;
+
+                            await Task.Delay(timeout).ContinueWith((t) =>
+                            {
+                                if (isAwaitingResponse)
+                                {
+                                    Console.WriteLine("Response timed out.");
+                                    isAwaitingResponse = false;
+                                }
+                            });
+
+                            while (isAwaitingResponse) { continue; }
+
                         }
                         else //need to skip multiple dgv entries without accidentaly skipping entries
                         {
@@ -125,27 +143,6 @@ namespace Gidrolock_Modbus_Scanner
             {
                 MessageBox.Show(err.Message, "AutoPollAsync");
             }
-
-        }
-
-        public async Task PollForEntry(Entry entry)
-        {
-            byte[] message = new byte[8];
-            var send = Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
-            isAwaitingResponse = true;
-
-            Task delay = Task.WhenAny(Task.Delay(timeout), Task.Run(() => { while (isAwaitingResponse) { } return true; })).ContinueWith((t) =>
-            {
-                if (isAwaitingResponse)
-                {
-                    Console.WriteLine("Response timed out.");
-                    isAwaitingResponse = false;
-                }
-                return false;
-            });
-
-
-            await delay;
 
         }
 
@@ -297,7 +294,8 @@ namespace Gidrolock_Modbus_Scanner
                                     bytes.Add(e.Data[i]);
                             }
                             bytes.Reverse();
-                            entryRows[activeDGVIndex].SetValue(System.Text.Encoding.UTF8.GetString(bytes.ToArray()));
+                            string str = System.Text.Encoding.UTF8.GetString(bytes.ToArray());
+                            entryRows[activeDGVIndex].SetValue(str);
 
                             activeDGVIndex++;
 
@@ -338,11 +336,12 @@ namespace Gidrolock_Modbus_Scanner
 
             public void SetValue(string value)
             {
-                valueLabel.Text = value;
+                this.Invoke(new MethodInvoker(delegate { valueLabel.Text = value; }));
             }
 
             public EntryRow(int number, int address, string name)
             {
+                //this.BackColor = Color.Black;
                 chboxPanel.Parent = this;
                 numberLabel.Parent = this;
                 addressLabel.Parent = this;
