@@ -6,12 +6,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Gidrolock Modbus Scanner")]
+[assembly: AssemblyTitle("Zori's Modbus Scanner")]
 [assembly: AssemblyDescription("A collection of Modbus tools.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("nikzori")]
-[assembly: AssemblyProduct("Gidrolock Modbus Scanner")]
-[assembly: AssemblyCopyright("Copyright ©  2024")]
+[assembly: AssemblyProduct("Zori's Modbus Scanner")]
+[assembly: AssemblyCopyright("Copyright ©  2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -30,6 +30,6 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("0.9.0.0")]
-[assembly: AssemblyFileVersion("0.9.0.0")]
+[assembly: AssemblyVersion("0.9.1.0")]
+[assembly: AssemblyFileVersion("0.9.1.0")]
 [assembly: NeutralResourcesLanguage("en")]

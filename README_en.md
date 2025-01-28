@@ -1,4 +1,4 @@
-# Gidrolock Modbus Scanner
+# Zori's Modbus Scanner
 
 [RU](https://github.com/nikzori/modbus-scanner) | EN
 
