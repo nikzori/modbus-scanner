@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gidrolock Modbus Scanner", "Gidrolock Modbus Scanner.csproj", "{47A399D3-30C1-4EF4-9E94-F3518919A59C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zori's Modbus Scanner", "Zori's Modbus Scanner.csproj", "{47A399D3-30C1-4EF4-9E94-F3518919A59C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -15,7 +15,7 @@ namespace Gidrolock_Modbus_Scanner
     {
         bool isPolling = false;
         bool isAwaitingResponse = false;
-        byte[] message = new byte[255];
+        ModbusResponseEventArgs latestMessage = null;
 
         int timeout = 3000;
         int pollDelay = 250; // delay between each entry poll, ms
@@ -117,26 +117,214 @@ namespace Gidrolock_Modbus_Scanner
 
                             while (isAwaitingResponse) { continue; }
 
-                        }
-                        else //need to skip multiple dgv entries without accidentaly skipping entries
-                        {
-                            if (device.entries[activeEntryIndex].labels is null || device.entries[activeEntryIndex].labels.Count == 0)
-                                activeDGVIndex++;
-                            else
+                            try
                             {
-                                for (int i = 0; i < device.entries[activeEntryIndex].labels.Count; i++)
+                                if (entries[activeEntryIndex].readOnce)
                                 {
-                                    activeDGVIndex++;
+                                    entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate { entryRows[activeDGVIndex].chboxPanel.chbox.Checked = false; }));
                                 }
-                            }
-                        }
+                                int dbc = latestMessage.Message[2]; // data byte count
+                                switch (entries[activeEntryIndex].dataType)
+                                {
+                                    case ("bool"):
+                                        if (entries[activeEntryIndex].labels is null || entries[activeEntryIndex].labels.Count == 0) // assume that no labels = 1 entry
+                                        {
+                                            //no valueParse keys
+                                            if (entries[activeEntryIndex].valueParse is null || entries[activeEntryIndex].valueParse.Keys.Count == 0)
+                                            {
+                                                // coil combobox
+                                                if (entries[activeEntryIndex].registerType == RegisterType.Coil)
+                                                    entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
+                                                    {
+                                                        entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False");
+                                                    }));
+                                                // discrete inputs
+                                                else entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
+                                                {
+                                                    entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False");
+                                                }));
+                                            }
+                                            else
+                                            {
+                                                try 
+                                                {
+                                                    entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
+                                                    {
+                                                        entryRows[activeDGVIndex].valueLabel.Text = latestMessage.Data[0] > 0x00 ? entries[activeEntryIndex].valueParse["true"] : entries[activeEntryIndex].valueParse["false"];
+                                                    }));
+                                                }
+                                                catch (Exception err)
+                                                {
+                                                    Console.WriteLine(err.Message);
+                                                    // coil combobox
+                                                    if (entries[activeEntryIndex].registerType == RegisterType.Coil)
+                                                        entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False");
+                                                    else // discrete inputs
+                                                       entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False");
+                                                }
+                                            }
+                                            activeDGVIndex++;
+                                        }
+                                        else
+                                        {
+                                            List<bool> values = new List<bool>();
+                                            for (int i = 0; i < dbc; i++)
+                                            {
+                                                for (int j = 0; j < 8; j++)
+                                                {
+                                                    bool res = (((latestMessage.Data[i] >> j) & 0x01) >= 1) ? true : false;
+                                                    values.Add(res);
+                                                }
+                                            }
+                                            for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
+                                            {
+                                                if (entries[activeEntryIndex].registerType == RegisterType.Coil)
+                                                    entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
+                                                    {
+                                                        entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False");
+                                                    }));
+                                                else entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
+                                                {
+                                                    entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False");
+                                                }));
+                                                activeDGVIndex++;
+                                            }
+                                        }
+                                        break;
+                                    case ("uint16"):
+                                        ushort value = BitConverter.ToUInt16(latestMessage.Data, 0);
+                                        if (entries[activeEntryIndex].labels is null || entries[activeEntryIndex].labels.Count == 0) // single value
+                                        {
+                                            if (entries[activeEntryIndex].valueParse is null || entries[activeEntryIndex].valueParse.Keys.Count == 0)
+                                            {
+                                                //Array.Reverse(e.Data); // this was necessary, but something changed, idk
+                                                //Console.WriteLine("ushort parsed value: " + value);
+                                                entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
+                                                {
+                                                    entryRows[activeDGVIndex].SetValue(value.ToString());
+                                                }));
+                                            }
+                                            else
+                                            {
+                                                try
+                                                {
+                                                    entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
+                                                    {
+                                                        entryRows[activeDGVIndex].SetValue(entries[activeEntryIndex].valueParse[value.ToString()]);
+                                                    }));
+                                                }
+                                                catch (Exception err)
+                                                {
+                                                    entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
+                                                    {
+                                                        entryRows[activeDGVIndex].SetValue(value.ToString());
+                                                    }));
+                                                    MessageBox.Show("Error parsing uint value at address: " + entries[activeEntryIndex].address + "; " + err.Message, "uint16 parse");
+                                                }
+                                            }
 
-                        activeEntryIndex++;
-                        if (activeEntryIndex >= device.entries.Count)
-                            activeEntryIndex = 0;
+                                            activeDGVIndex++;
+                                        }
+                                        else // value group
+                                        {
+                                            try
+                                            {
+                                                List<ushort> values = new List<ushort>();
+                                                for (int i = 0; i < dbc; i += 2)
+                                                {
+                                                    ushort s = BitConverter.ToUInt16(latestMessage.Data, i);
+                                                    values.Add(s);
+                                                }
+                                                //Console.WriteLine("ushort values count: " + values.Count);
+                                                //Console.WriteLine("entity labels count: " + entries[activeEntryIndex].labels.Count);
+                                                for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
+                                                {
+                                                    if (device.entries[activeEntryIndex].valueParse != null)
+                                                    {
+                                                        entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
+                                                        {
+                                                            entryRows[activeDGVIndex].SetValue(values[i].ToString());
+                                                        }));
+                                                    }
+                                                    else
+                                                    {
+                                                        entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
+                                                        {
+                                                            entryRows[activeDGVIndex].SetValue(values[i].ToString());
+                                                        }));
+                                                    }
+                                                    activeDGVIndex++;
+                                                }
+                                            }
+                                            catch (Exception err)
+                                            {
+                                                entryRows[activeDGVIndex].SetValue(value.ToString());
+                                                MessageBox.Show("Error parsing uint value at address: " + entries[activeEntryIndex].address + "; " + err.Message, "uint16 group req parse");
+                                            }
+                                        }
+
+
+                                        break;
+                                    case ("uint32"):
+                                        Array.Reverse(latestMessage.Data);
+                                        entryRows[activeDGVIndex].SetValue(BitConverter.ToUInt32(latestMessage.Data, 0).ToString());
+
+                                        activeDGVIndex++;
+
+                                        break;
+                                    case ("string"):
+                                        List<byte> bytes = new List<byte>();
+                                        for (int i = 0; i < latestMessage.Data.Length; i++)
+                                        {
+                                            if (latestMessage.Data[i] != 0)
+                                                bytes.Add(latestMessage.Data[i]);
+                                        }
+                                        bytes.Reverse();
+                                        string str = System.Text.Encoding.UTF8.GetString(bytes.ToArray());
+                                        entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
+                                        {
+                                            entryRows[activeDGVIndex].SetValue(str);
+                                        }));
+
+                                        activeDGVIndex++;
+
+                                        break;
+                                    default:
+                                        MessageBox.Show("Wrong data type set for entry " + entries[activeEntryIndex].name);
+                                        activeDGVIndex++;
+                                        break;
+                                }
+                                if (activeDGVIndex >= entryRows.Count)
+                                    activeDGVIndex = 0;
+
+                                //MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
+                                port.DiscardInBuffer();
+                            }
+                            catch (Exception err) { MessageBox.Show(err.Message, "Publish response error"); }
+
+                        }
                         if (activeDGVIndex >= entryRows.Count)
                             activeDGVIndex = 0;
+
                     }
+                    else //need to skip multiple dgv entries without accidentaly skipping entries
+                    {
+                        if (device.entries[activeEntryIndex].labels is null || device.entries[activeEntryIndex].labels.Count == 0)
+                            activeDGVIndex++;
+                        else
+                        {
+                            for (int i = 0; i < device.entries[activeEntryIndex].labels.Count; i++)
+                            {
+                                activeDGVIndex++;
+                            }
+                        }
+                    }
+
+                    activeEntryIndex++;
+                    if (activeEntryIndex >= device.entries.Count)
+                        activeEntryIndex = 0;
+                    if (activeDGVIndex >= entryRows.Count)
+                        activeDGVIndex = 0;
                 }
             }
             catch (Exception err)
@@ -150,173 +338,10 @@ namespace Gidrolock_Modbus_Scanner
         {
             if (isAwaitingResponse)
             {
-                try
-                {
-                    if (entries[activeEntryIndex].readOnce)
-                    {
-                        entryRows[activeDGVIndex].chboxPanel.chbox.Checked = false;
-                    }
-                    int dbc = e.Message[2]; // data byte count
-                    switch (entries[activeEntryIndex].dataType)
-                    {
-                        case ("bool"):
-                            if (entries[activeEntryIndex].labels is null || entries[activeEntryIndex].labels.Count == 0) // assume that no labels = 1 entry
-                            {
-                                //no valueParse keys
-                                if (entries[activeEntryIndex].valueParse is null || entries[activeEntryIndex].valueParse.Keys.Count == 0)
-                                {
-                                    // coil combobox
-                                    if (entries[activeEntryIndex].registerType == RegisterType.Coil)
-                                    {
-                                        entryRows[activeDGVIndex].SetValue(e.Data[0] > 0x00 ? "True" : "False");
-                                    }
-                                    // discrete inputs
-                                    else
-                                    {
-                                        entryRows[activeDGVIndex].SetValue(e.Data[0] > 0x00 ? "True" : "False");
-                                    }
-                                }
-                                else
-                                {
-                                    try { entryRows[activeDGVIndex].valueLabel.Text = e.Data[0] > 0x00 ? entries[activeEntryIndex].valueParse["true"] : entries[activeEntryIndex].valueParse["false"]; }
-                                    catch (Exception err)
-                                    {
-                                        // coil combobox
-                                        if (entries[activeEntryIndex].registerType == RegisterType.Coil)
-                                        {
-                                            entryRows[activeDGVIndex].SetValue(e.Data[0] > 0x00 ? "True" : "False");
-                                        }
-                                        else // discrete inputs
-                                        {
-                                            entryRows[activeDGVIndex].SetValue(e.Data[0] > 0x00 ? "True" : "False");
-                                        }
-                                    }
-                                }
-                                activeDGVIndex++;
-                            }
-                            else
-                            {
-                                List<bool> values = new List<bool>();
-                                for (int i = 0; i < dbc; i++)
-                                {
-                                    for (int j = 0; j < 8; j++)
-                                    {
-                                        bool res = (((e.Data[i] >> j) & 0x01) >= 1) ? true : false;
-                                        values.Add(res);
-                                    }
-                                }
-                                for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
-                                {
-                                    if (entries[activeEntryIndex].registerType == RegisterType.Coil)
-                                    {
-                                        entryRows[activeDGVIndex].SetValue(e.Data[0] > 0x00 ? "True" : "False");
-                                    }
-                                    else
-                                    {
-                                        entryRows[activeDGVIndex].SetValue(e.Data[0] > 0x00 ? "True" : "False");
-                                    }
-                                    activeDGVIndex++;
-                                }
-                            }
-                            break;
-                        case ("uint16"):
-                            ushort value = BitConverter.ToUInt16(e.Data, 0);
-                            if (entries[activeEntryIndex].labels is null || entries[activeEntryIndex].labels.Count == 0) // single value
-                            {
-                                if (entries[activeEntryIndex].valueParse is null || entries[activeEntryIndex].valueParse.Keys.Count == 0)
-                                {
-                                    //Array.Reverse(e.Data); // this was necessary, but something changed, idk
-
-                                    //Console.WriteLine("ushort parsed value: " + value);
-                                    entryRows[activeDGVIndex].SetValue(value.ToString());
-                                }
-                                else
-                                {
-                                    try
-                                    {
-                                        entryRows[activeDGVIndex].SetValue(entries[activeEntryIndex].valueParse[value.ToString()]);
-                                    }
-                                    catch (Exception err)
-                                    {
-                                        entryRows[activeDGVIndex].SetValue(value.ToString());
-                                        MessageBox.Show("Error parsing uint value at address: " + entries[activeEntryIndex].address + "; " + err.Message, "uint16 parse");
-                                    }
-                                }
-
-                                activeDGVIndex++;
-                            }
-                            else // value group
-                            {
-                                try
-                                {
-                                    List<ushort> values = new List<ushort>();
-                                    for (int i = 0; i < dbc; i += 2)
-                                    {
-                                        ushort s = BitConverter.ToUInt16(e.Data, i);
-                                        values.Add(s);
-                                    }
-                                    //Console.WriteLine("ushort values count: " + values.Count);
-                                    //Console.WriteLine("entity labels count: " + entries[activeEntryIndex].labels.Count);
-                                    for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
-                                    {
-                                        if (device.entries[activeEntryIndex].valueParse != null)
-                                        {
-                                            entryRows[activeDGVIndex].SetValue(values[i].ToString());
-                                        }
-                                        else
-                                        {
-                                            entryRows[activeDGVIndex].SetValue(values[i].ToString());
-                                        }
-                                        activeDGVIndex++;
-                                    }
-                                }
-                                catch (Exception err)
-                                {
-                                    entryRows[activeDGVIndex].SetValue(value.ToString());
-                                    MessageBox.Show("Error parsing uint value at address: " + entries[activeEntryIndex].address + "; " + err.Message, "uint16 group req parse");
-                                }
-                            }
-
-
-                            break;
-                        case ("uint32"):
-                            Array.Reverse(e.Data);
-                            entryRows[activeDGVIndex].SetValue(BitConverter.ToUInt32(e.Data, 0).ToString());
-
-                            activeDGVIndex++;
-
-                            break;
-                        case ("string"):
-                            List<byte> bytes = new List<byte>();
-                            for (int i = 0; i < e.Data.Length; i++)
-                            {
-                                if (e.Data[i] != 0)
-                                    bytes.Add(e.Data[i]);
-                            }
-                            bytes.Reverse();
-                            string str = System.Text.Encoding.UTF8.GetString(bytes.ToArray());
-                            entryRows[activeDGVIndex].SetValue(str);
-
-                            activeDGVIndex++;
-
-                            break;
-                        default:
-                            MessageBox.Show("Wrong data type set for entry " + entries[activeEntryIndex].name);
-                            activeDGVIndex++;
-                            break;
-                    }
-                    if (activeDGVIndex >= entryRows.Count)
-                        activeDGVIndex = 0;
-
-                    //MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
-                    port.DiscardInBuffer();
-                }
-                catch (Exception err) { MessageBox.Show(err.Message, "Publish response error"); }
-
+                latestMessage = e;
+                isAwaitingResponse = false;
             }
-            if (activeDGVIndex >= entryRows.Count)
-                activeDGVIndex = 0;
-            isAwaitingResponse = false;
+
         }
 
         private void Button_StartStop_Click(object sender, EventArgs e)
@@ -336,7 +361,7 @@ namespace Gidrolock_Modbus_Scanner
 
             public void SetValue(string value)
             {
-                this.Invoke(new MethodInvoker(delegate { valueLabel.Text = value; }));
+                valueLabel.Text = value;
             }
 
             public EntryRow(int number, int address, string name)
