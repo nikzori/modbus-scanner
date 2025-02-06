@@ -626,44 +626,6 @@ namespace Gidrolock_Modbus_Scanner
                 UpDown_RegLength.Enabled = false;
             else UpDown_RegLength.Enabled = true;
         }
-        /* TCP/RTU switch behaviour */
-        /*
-        private void Radio_SerialPort_CheckedChanged(object sender, EventArgs e)
-        {
-            if (Radio_SerialPort.Checked)
-                GBox_Serial.Enabled = true;
-            else GBox_Serial.Enabled = false;
-        }
-
-        private void Radio_Ethernet_CheckedChanged(object sender, EventArgs e)
-        {
-            if (Radio_Ethernet.Checked)
-                GBox_Ethernet.Enabled = true;
-            else GBox_Ethernet.Enabled = false;
-        }
-        */
-        private async Task<bool> SocketDataTransfer(byte[] data)
-        {
-            await Task.Run(() => { socket.Send(data); });
-            byte[] res = new byte[64];
-            await Task.Run(() =>
-            {
-                while (true)
-                {
-                    int bytesReceived = socket.Receive(res);
-
-                    if (bytesReceived == 0)
-                        break;
-
-                    string resParsed = "";
-                    Modbus.ParseResponse(res, ref resParsed);
-
-                    Console.Out.WriteLine("Received data on TCP socket: " + resParsed);
-                    AddLog("Response from TCP Server: " + resParsed);
-                }
-            });
-            return true;
-        }
 
         private void LoadConfig(object sender, EventArgs e)
         {
@@ -671,7 +633,7 @@ namespace Gidrolock_Modbus_Scanner
             {
                 //Get the path of specified file
                 path = ofd.FileName;
-                Label_ConfPath.Text = ofd.FileName;
+                Label_ConfPath.Invoke(new MethodInvoker(delegate { Label_ConfPath.Text = ofd.FileName; }));
 
                 selectedPath = SelectedPath.File;
             }
@@ -689,11 +651,6 @@ namespace Gidrolock_Modbus_Scanner
                 selectedPath = SelectedPath.Folder;
             }
             UpdatePathLabel();
-        }
-
-        private void CBox_Ports_Click(object sender, MouseEventArgs e)
-        {
-
         }
 
         public static bool IsHex(string str)

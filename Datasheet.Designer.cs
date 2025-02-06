@@ -34,7 +34,6 @@
             this.Label_DeviceName = new System.Windows.Forms.Label();
             this.Label_Description = new System.Windows.Forms.Label();
             this.Button_StartStop = new System.Windows.Forms.Button();
-            this.label1 = new System.Windows.Forms.Label();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this.SuspendLayout();
             // 
@@ -85,21 +84,17 @@
             this.Button_StartStop.UseVisualStyleBackColor = true;
             this.Button_StartStop.Click += new System.EventHandler(this.Button_StartStop_Click);
             // 
-            // label1
-            // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(33, 64);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(14, 13);
-            this.label1.TabIndex = 7;
-            this.label1.Text = "#";
-            // 
             // flowLayoutPanel1
             // 
+            this.flowLayoutPanel1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.flowLayoutPanel1.AutoScroll = true;
+            this.flowLayoutPanel1.BackColor = System.Drawing.Color.LightGray;
             this.flowLayoutPanel1.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
-            this.flowLayoutPanel1.Location = new System.Drawing.Point(16, 81);
+            this.flowLayoutPanel1.Location = new System.Drawing.Point(12, 81);
             this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(564, 407);
+            this.flowLayoutPanel1.Size = new System.Drawing.Size(568, 407);
             this.flowLayoutPanel1.TabIndex = 8;
             this.flowLayoutPanel1.WrapContents = false;
             // 
@@ -109,14 +104,15 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(592, 500);
             this.Controls.Add(this.flowLayoutPanel1);
-            this.Controls.Add(this.label1);
             this.Controls.Add(this.Button_StartStop);
             this.Controls.Add(this.Label_Description);
             this.Controls.Add(this.Label_DeviceName);
             this.Controls.Add(this.Label_DescriptionLabel);
             this.Controls.Add(this.Label_DeviceNameLabel);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MaximizeBox = false;
             this.Name = "Datasheet";
+            this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
             this.Text = "Datasheet";
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -129,7 +125,6 @@
         private System.Windows.Forms.Label Label_DeviceName;
         private System.Windows.Forms.Label Label_Description;
         private System.Windows.Forms.Button Button_StartStop;
-        private System.Windows.Forms.Label label1;
         private System.Windows.Forms.FlowLayoutPanel flowLayoutPanel1;
     }
 }

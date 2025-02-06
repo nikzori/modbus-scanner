@@ -51,7 +51,7 @@ namespace Gidrolock_Modbus_Scanner
                     // multi-register entry check
                     if ((e.length == 2 && e.dataType == "uint32") || e.dataType == "string")
                     {
-                        entryRows.Add(new EntryRow(rowCount, e.address, e.name) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
+                        entryRows.Add(new EntryRow(rowCount, e, e.name) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
                         rowCount++;
                     }
                     else
@@ -60,11 +60,11 @@ namespace Gidrolock_Modbus_Scanner
                         {
                             if (i < e.labels.Count)
                             {
-                                entryRows.Add(new EntryRow(rowCount, e.address + i, e.labels[i]) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
+                                entryRows.Add(new EntryRow(rowCount, e, e.labels[i]) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
                             }
                             else
                             {
-                                entryRows.Add(new EntryRow(rowCount, e.address + i, (e.address + i).ToString()) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
+                                entryRows.Add(new EntryRow(rowCount, e, (e.address + i).ToString()) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
                             }
                             rowCount++;
                         }
@@ -73,7 +73,7 @@ namespace Gidrolock_Modbus_Scanner
                 }
                 else
                 {
-                    entryRows.Add(new EntryRow(rowCount, e.address, e.name) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
+                    entryRows.Add(new EntryRow(rowCount, e, e.name) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
                     rowCount++;
                 }
             }
@@ -103,8 +103,8 @@ namespace Gidrolock_Modbus_Scanner
                         {
                             //Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
                             Entry entry = entries[activeEntryIndex];
-                            Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
                             isAwaitingResponse = true;
+                            Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
 
                             await Task.Delay(timeout).ContinueWith((t) =>
                             {
@@ -116,7 +116,6 @@ namespace Gidrolock_Modbus_Scanner
                             });
 
                             while (isAwaitingResponse) { continue; }
-
                             try
                             {
                                 if (entries[activeEntryIndex].readOnce)
@@ -146,11 +145,11 @@ namespace Gidrolock_Modbus_Scanner
                                             }
                                             else
                                             {
-                                                try 
+                                                try
                                                 {
                                                     entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate
                                                     {
-                                                        entryRows[activeDGVIndex].valueLabel.Text = latestMessage.Data[0] > 0x00 ? entries[activeEntryIndex].valueParse["true"] : entries[activeEntryIndex].valueParse["false"];
+                                                        entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? entries[activeEntryIndex].valueParse["true"] : entries[activeEntryIndex].valueParse["false"]);
                                                     }));
                                                 }
                                                 catch (Exception err)
@@ -160,7 +159,7 @@ namespace Gidrolock_Modbus_Scanner
                                                     if (entries[activeEntryIndex].registerType == RegisterType.Coil)
                                                         entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False");
                                                     else // discrete inputs
-                                                       entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False");
+                                                        entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False");
                                                 }
                                             }
                                             activeDGVIndex++;
@@ -341,7 +340,7 @@ namespace Gidrolock_Modbus_Scanner
                 latestMessage = e;
                 isAwaitingResponse = false;
             }
-
+            else Console.WriteLine("Received a message from a device despite not awaiting for a response. Check timeout period.");
         }
 
         private void Button_StartStop_Click(object sender, EventArgs e)
@@ -353,49 +352,87 @@ namespace Gidrolock_Modbus_Scanner
 
         public class EntryRow : Panel
         {
-            public CheckboxPanel chboxPanel = new CheckboxPanel() { Width = 20, Height = 20 };
+            public CheckboxPanel chboxPanel = new CheckboxPanel() { Width = 20, Height = 20, Margin = Padding.Empty };
             public Label numberLabel = new Label() { Height = 20, Width = 30, TextAlign = ContentAlignment.MiddleLeft };
             public Label addressLabel = new Label() { Height = 20, Width = 60, TextAlign = ContentAlignment.MiddleLeft };
             public Label nameLabel = new Label() { Height = 20, Width = 220, TextAlign = ContentAlignment.MiddleLeft };
-            public Label valueLabel = new Label() { Height = 20, Width = 220, TextAlign = ContentAlignment.MiddleLeft };
+            public Control valueControl = null;
 
             public void SetValue(string value)
             {
-                valueLabel.Text = value;
+                if (valueControl is null)
+                    return;
+
+                if (valueControl is ComboBox)
+                {
+                    Console.WriteLine("Trying to change cbox value;");
+                    ComboBox cb = valueControl as ComboBox;
+                    if (value == "True")
+                        cb.SelectedIndex = 1;
+                    else cb.SelectedIndex = 0;
+                }
+                else valueControl.Text = value;
+
+                this.Update();
             }
 
-            public EntryRow(int number, int address, string name)
+            public EntryRow(int number, Entry entry, string name)
             {
-                //this.BackColor = Color.Black;
+                if (number % 2 == 0)
+                    this.BackColor = Color.White;
+                else this.BackColor = Color.LightGray;
+
                 chboxPanel.Parent = this;
                 numberLabel.Parent = this;
                 addressLabel.Parent = this;
                 nameLabel.Parent = this;
-                valueLabel.Parent = this;
+
 
                 chboxPanel.Location = new Point(Left, Top);
                 numberLabel.Location = new Point(20, Top);
                 addressLabel.Location = new Point(50, Top);
                 nameLabel.Location = new Point(110, Top);
-                valueLabel.Location = new Point(330, Top);
+
 
                 numberLabel.Text = number.ToString();
-                addressLabel.Text = address.ToString();
+                addressLabel.Text = entry.address.ToString();
                 nameLabel.Text = name.ToString();
+
+
+                if (entry.registerType == RegisterType.Holding)
+                {
+                    valueControl = new TextBox() { Height = 20, Width = 220 };
+                }
+                else if (entry.registerType == RegisterType.Coil)
+                {
+                    valueControl = new ComboBox() { Height = 20, Width = 220 };
+                    ComboBox cb = valueControl as ComboBox;
+
+                    cb.Items.Add("False");
+                    cb.Items.Add("True");
+                }
+                else
+                {
+                    valueControl = new Label() { Height = 20, Width = 220, TextAlign = ContentAlignment.MiddleLeft };
+                }
+                valueControl.Parent = this;
+                valueControl.Location = new Point(330, Top);
+                
+
             }
         }
+    }
 
-        public class CheckboxPanel : Panel
+    public class CheckboxPanel : Panel
+    {
+        public CheckBox chbox;
+        public CheckboxPanel() : base()
         {
-            public CheckBox chbox;
-            public CheckboxPanel() : base()
-            {
-                chbox = new CheckBox() { Parent = this, Location = new Point(Left, Top) };
-            }
-            public void SetVisibility(bool value)
-            {
-                chbox.Visible = value;
-            }
+            chbox = new CheckBox() { Parent = this, Location = new Point(Left, Top) };
+        }
+        public void SetVisibility(bool value)
+        {
+            chbox.Visible = value;
         }
     }
 }
