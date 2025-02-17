@@ -24,8 +24,8 @@ namespace Gidrolock_Modbus_Scanner
         Device device = App.device;
         List<Entry> entries;
         List<EntryRow> entryRows;
-        int activeEntryIndex; // entry index for modbus responses
-        int activeDGVIndex; // index for DGV rows
+        int activeEntryIndex;   // entry index for modbus requests/responses
+        int activeRowIndex;     // index for actual rows on the panel; separate indexes needed for group requests
         SerialPort port = Modbus.port;
         Thread timer;
 
@@ -48,16 +48,14 @@ namespace Gidrolock_Modbus_Scanner
             entryRows = new List<EntryRow>();
             foreach (Entry e in entries)
             {
-                Console.WriteLine("Creating Control for " + e.name);
                 if (e.length > 1)
                 {
-                    Console.WriteLine("Length greater than 1;");
                     if ((e.length == 2 && e.dataType == "uint32") || e.dataType == "string") // this is a single multi-register entry
                     {
                         entryRows.Add(new EntryRow(rowCount, e, e.name) { Width = flowLayoutPanel1.Width - 10, Height = 20 });
                         rowCount++;
                     }
-                    else // this is a collection of separate registers
+                    else // this is a collection of registers
                     {
                         for (int i = 0; i < e.length; i++)
                         {
@@ -96,12 +94,12 @@ namespace Gidrolock_Modbus_Scanner
             {
                 if (isPolling)
                 {
-                    if (entryRows[activeDGVIndex].chboxPanel.chbox.Checked)
+                    if (entryRows[activeRowIndex].chboxPanel.chbox.Checked)
                     {
                         //Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
                         Entry entry = entries[activeEntryIndex];
                         isAwaitingResponse = true;
-                        Modbus.ReadRegAsync(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+                        Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
 
                         timer = new Thread(new ThreadStart(delegate
                         {
@@ -122,15 +120,15 @@ namespace Gidrolock_Modbus_Scanner
                         {
                             if (entries[activeEntryIndex].readOnce)
                             {
-                                entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate { entryRows[activeDGVIndex].chboxPanel.chbox.Checked = false; }));
+                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].chboxPanel.chbox.Checked = false; }));
                             }
                             dbc = latestMessage.Message[2]; // data byte count
                             if (entries[activeEntryIndex].labels is null || entries[activeEntryIndex].labels.Count == 0)
                                 ParseSingle(); // assume that no labels = 1 entry
                             else ParseGroup();
 
-                            if (activeDGVIndex >= entryRows.Count)
-                                activeDGVIndex = 0;
+                            if (activeRowIndex >= entryRows.Count)
+                                activeRowIndex = 0;
 
                             //MessageBox.Show("Получен ответ от устройства: " + dataCleaned, "Успех", MessageBoxButtons.OK);
                             port.DiscardInBuffer();
@@ -138,19 +136,19 @@ namespace Gidrolock_Modbus_Scanner
                         catch (Exception err) { MessageBox.Show(err.Message, "Publish response error"); }
 
                     }
-                    if (activeDGVIndex >= entryRows.Count)
-                        activeDGVIndex = 0;
+                    if (activeRowIndex >= entryRows.Count)
+                        activeRowIndex = 0;
 
                 }
                 else //need to skip multiple dgv entries without accidentaly skipping entries
                 {
                     if (device.entries[activeEntryIndex].labels is null || device.entries[activeEntryIndex].labels.Count == 0)
-                        activeDGVIndex++;
+                        activeRowIndex++;
                     else
                     {
                         for (int i = 0; i < device.entries[activeEntryIndex].labels.Count; i++)
                         {
-                            activeDGVIndex++;
+                            activeRowIndex++;
                         }
                     }
                 }
@@ -158,8 +156,8 @@ namespace Gidrolock_Modbus_Scanner
                 activeEntryIndex++;
                 if (activeEntryIndex >= device.entries.Count)
                     activeEntryIndex = 0;
-                if (activeDGVIndex >= entryRows.Count)
-                    activeDGVIndex = 0;
+                if (activeRowIndex >= entryRows.Count)
+                    activeRowIndex = 0;
             }
 
         }
@@ -171,16 +169,16 @@ namespace Gidrolock_Modbus_Scanner
                 case "bool":
                     //no valueParse keys
                     if (entries[activeEntryIndex].valueParse is null || entries[activeEntryIndex].valueParse.Keys.Count == 0)
-                        entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate { entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False"); }));
+                        entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False"); }));
 
                     else try
                         {
-                            entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate { entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? entries[activeEntryIndex].valueParse["true"] : entries[activeEntryIndex].valueParse["false"]); }));
+                            entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(latestMessage.Data[0] > 0x00 ? entries[activeEntryIndex].valueParse["true"] : entries[activeEntryIndex].valueParse["false"]); }));
                         }
                         catch (Exception err)
                         {
                             MessageBox.Show(err.Message);
-                            entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate { entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False"); }));
+                            entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False"); }));
                         }
                 break;
                 case ("uint16"):
@@ -191,17 +189,17 @@ namespace Gidrolock_Modbus_Scanner
                         {
                             //Array.Reverse(e.Data); // this was necessary, but something changed, idk
                             //Console.WriteLine("ushort parsed value: " + value);
-                            entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate { entryRows[activeDGVIndex].SetValue(value.ToString()); }));
+                            entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(value.ToString()); }));
                         }
                         else
                         {
                             try
                             {
-                                entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate { entryRows[activeDGVIndex].SetValue(entries[activeEntryIndex].valueParse[value.ToString()]); }));
+                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(entries[activeEntryIndex].valueParse[value.ToString()]); }));
                             }
                             catch (Exception err)
                             {
-                                entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate { entryRows[activeDGVIndex].SetValue(value.ToString()); }));
+                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(value.ToString()); }));
                                 MessageBox.Show("Error parsing uint value at address: " + entries[activeEntryIndex].address + "; " + err.Message, "uint16 parse");
                             }
                         }
@@ -210,8 +208,8 @@ namespace Gidrolock_Modbus_Scanner
 
                 case ("uint32"):
                     Array.Reverse(latestMessage.Data);
-                    entryRows[activeDGVIndex].SetValue(BitConverter.ToUInt32(latestMessage.Data, 0).ToString());
-                    activeDGVIndex++;
+                    entryRows[activeRowIndex].SetValue(BitConverter.ToUInt32(latestMessage.Data, 0).ToString());
+                    activeRowIndex++;
                 break;
 
                 case ("string"):
@@ -223,15 +221,15 @@ namespace Gidrolock_Modbus_Scanner
                     }
                     bytes.Reverse();
                     string str = System.Text.Encoding.UTF8.GetString(bytes.ToArray());
-                    entryRows[activeDGVIndex].Invoke(new MethodInvoker(delegate { entryRows[activeDGVIndex].SetValue(str); }));
-                    activeDGVIndex++;
+                    entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(str); }));
+                    activeRowIndex++;
                 break;
                 default:
                     MessageBox.Show("Wrong data type set for entry " + entries[activeEntryIndex].name);
-                    activeDGVIndex++;
+                    activeRowIndex++;
                 break;
             }
-            activeDGVIndex++;
+            activeRowIndex++;
         }
         void ParseGroup()
         {
@@ -250,22 +248,22 @@ namespace Gidrolock_Modbus_Scanner
                     for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
                     {
                         if (entries[activeEntryIndex].registerType == RegisterType.Coil)
-                            entryRows[activeDGVIndex].BeginInvoke(new MethodInvoker(delegate { entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False"); }));
-                        else entryRows[activeDGVIndex].BeginInvoke(new MethodInvoker(delegate
+                            entryRows[activeRowIndex].BeginInvoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False"); }));
+                        else entryRows[activeRowIndex].BeginInvoke(new MethodInvoker(delegate
                         {
-                            entryRows[activeDGVIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False");
+                            entryRows[activeRowIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False");
                         }));
-                        activeDGVIndex++;
+                        activeRowIndex++;
                     }
                 break;
                 case "uint16":
                     try
                     {
-                        List<ushort> values = new List<ushort>();
+                        List<ushort> _values = new List<ushort>();
                         for (int i = 0; i < dbc; i += 2)
                         {
                             ushort s = BitConverter.ToUInt16(latestMessage.Data, i);
-                            values.Add(s);
+                            _values.Add(s);
                         }
                         //Console.WriteLine("ushort values count: " + values.Count);
                         //Console.WriteLine("entity labels count: " + entries[activeEntryIndex].labels.Count);
@@ -273,30 +271,30 @@ namespace Gidrolock_Modbus_Scanner
                         {
                             if (device.entries[activeEntryIndex].valueParse != null)
                             {
-                                entryRows[activeDGVIndex].BeginInvoke(new MethodInvoker(delegate
+                                entryRows[activeRowIndex].BeginInvoke(new MethodInvoker(delegate
                                 {
-                                    entryRows[activeDGVIndex].SetValue(values[i].ToString());
+                                    entryRows[activeRowIndex].SetValue(_values[i].ToString());
                                 }));
                             }
                             else
                             {
-                                entryRows[activeDGVIndex].BeginInvoke(new MethodInvoker(delegate
+                                entryRows[activeRowIndex].BeginInvoke(new MethodInvoker(delegate
                                 {
-                                    entryRows[activeDGVIndex].SetValue(values[i].ToString());
+                                    entryRows[activeRowIndex].SetValue(_values[i].ToString());
                                 }));
                             }
-                            activeDGVIndex++;
+                            activeRowIndex++;
                         }
                     }
                     catch (Exception err)
                     {
-                        entryRows[activeDGVIndex].BeginInvoke(new MethodInvoker(delegate { entryRows[activeDGVIndex].SetValue(value.ToString()); }));
+                        entryRows[activeRowIndex].BeginInvoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue("Error"); }));
                         MessageBox.Show("Error parsing uint value at address: " + entries[activeEntryIndex].address + "; " + err.Message, "uint16 group req parse");
                     }
                 break;
                 default:
                     MessageBox.Show("Wrong data type set for entry " + entries[activeEntryIndex].name);
-                    activeDGVIndex++;
+                    activeRowIndex++;
                 break;
             }
 
@@ -377,6 +375,7 @@ namespace Gidrolock_Modbus_Scanner
 
                     cb.Items.Add("False");
                     cb.Items.Add("True");
+                    cb.SelectedIndexChanged += delegate { Console.WriteLine("Selected index changed;"); };
                 }
                 else
                 {

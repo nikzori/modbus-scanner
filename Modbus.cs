@@ -64,7 +64,7 @@ namespace Gidrolock_Modbus_Scanner
         #endregion
 
         #region Read Functions
-        public static bool ReadRegAsync(SerialPort port, byte slaveID, FunctionCode functionCode, ushort address, ushort length)
+        public static bool ReadRegisters(SerialPort port, byte slaveID, FunctionCode functionCode, ushort address, ushort length)
         {
             //Ensure port is open:
             if (port.IsOpen)
@@ -286,13 +286,8 @@ namespace Gidrolock_Modbus_Scanner
             {
                 int dataLength = message[2];
                 Data = new byte[dataLength];
-                for (int i = 0; i < dataLength; i++)
-                {
-                    Data[i] = message[i + 3];
-                }
-                //Console.WriteLine("Read data: " + Modbus.ByteArrayToString(Data, false));
+                for (int i = 0; i < dataLength; i++) { Data[i] = message[i + 3]; }
             }
-            else Data = new byte[1] {0x0F};
         }
     }
 

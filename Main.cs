@@ -175,7 +175,7 @@ namespace Gidrolock_Modbus_Scanner
             port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex];
             port.Parity = Parity.None;
             port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
-            port.StopBits = (StopBits)CBox_StopBits.SelectedIndex; 
+            port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
 
             port.ReadTimeout = 3000;
             port.WriteTimeout = 3000;
@@ -190,7 +190,7 @@ namespace Gidrolock_Modbus_Scanner
             {
                 try
                 {
-                    Modbus.ReadRegAsync(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
+                    Modbus.ReadRegisters(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
                     isAwaitingResponse = true;
                     await Task.Delay(port.ReadTimeout).ContinueWith(_ =>
                     {
@@ -320,10 +320,7 @@ namespace Gidrolock_Modbus_Scanner
                 }
                 // setup event listener
                 ModbusResponseEventArgs message = null;
-                Modbus.ResponseReceived += (sndr, msg) =>
-                {
-                    message = msg;
-                };
+                Modbus.ResponseReceived += (sndr, msg) => { message = msg; };
 
                 foreach (CheckEntry ce in juju.Keys)
                 {
@@ -339,16 +336,16 @@ namespace Gidrolock_Modbus_Scanner
 
                         if (ce.dataType == "string")
                         {
-                           
+
                             List<byte> bytes = new List<byte>();
                             for (int i = 0; i < data.Length; i++)
                             {
                                 if (data[i] != 0)       // clean empty bytes from 16-bit registers
-                                    bytes.Add(data[i]); 
+                                    bytes.Add(data[i]);
                             }
                             string value = Encoding.UTF8.GetString(bytes.ToArray());
                             foreach (Device dev in juju[ce])
-                            { 
+                            {
                                 if (dev.checkEntry.expectedValue == value)
                                 {
                                     Console.WriteLine("It's a match!");
@@ -357,7 +354,7 @@ namespace Gidrolock_Modbus_Scanner
                                 }
                             }
                         }
-                        else if (ce.dataType == "bool") 
+                        else if (ce.dataType == "bool")
                         {
                             // why would you even do that lmao
 
@@ -401,25 +398,23 @@ namespace Gidrolock_Modbus_Scanner
                 }
                 if (device is /* still */ null)
                 {
-                    // none of the configs match the device responses
                     MessageBox.Show("Ни один из файлов конфигурации не подходит для устройства.");
                     return;
                 }
-                else
+
+                try
                 {
-                    try
-                    {
-                        AddLog("Попытка подключиться к устройству " + device.name);
-                        datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
-                        datasheet.Show();
-                    }
-                    catch (Exception err) { MessageBox.Show(err.Message); }
+                    AddLog("Попытка подключиться к устройству " + device.name);
+                    datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
+                    datasheet.Show();
                 }
+                catch (Exception err) { MessageBox.Show(err.Message); }
+
                 progressBar1.Value = 100;
             }
 
         }
-        
+
         void CBox_Ports_Click(object sender, EventArgs e)
         {
             CBox_Ports.Items.Clear();
@@ -430,7 +425,7 @@ namespace Gidrolock_Modbus_Scanner
         {
             isAwaitingResponse = false;
             AddLog("Получен ответ: " + Modbus.ByteArrayToString(e.Message));
-            switch(e.Status)
+            switch (e.Status)
             {
                 case (ModbusStatus.ReadSuccess):
                     string values = "";
@@ -450,7 +445,7 @@ namespace Gidrolock_Modbus_Scanner
                         }
                         AddLog("Dec: " + values);
                         AddLog("Unicode: " + ByteArrayToUnicode(e.Data));
-                    } 
+                    }
                     break;
                 case (ModbusStatus.WriteSuccess):
                     AddLog("Write success;");
@@ -660,7 +655,7 @@ namespace Gidrolock_Modbus_Scanner
             {
                 if (str[i] < '0' || str[i] > 'F')
                 {
-                    if ((i == 0 || i == 1) && str[i] == 'x') 
+                    if ((i == 0 || i == 1) && str[i] == 'x')
                         continue;
                     else return false;
                 }
@@ -679,7 +674,7 @@ namespace Gidrolock_Modbus_Scanner
         public static bool IsBin(string str)
         {
             str = str.ToLower();
-            for (int i = 0; i < str.Length;i++)
+            for (int i = 0; i < str.Length; i++)
             {
                 if (str[i] != '0' && str[i] != '1')
                 {
@@ -690,11 +685,11 @@ namespace Gidrolock_Modbus_Scanner
             }
             return true;
         }
-        public static string ByteArrayToUnicode(byte[] input) 
+        public static string ByteArrayToUnicode(byte[] input)
         {
             // stupid fucking WinForm textbox breaks from null symbols
             // stupid fucking Encoding class does byte-by-byte conversion
-            List<char> result = new List<char>(input.Length/2);
+            List<char> result = new List<char>(input.Length / 2);
             byte[] flip = input;
             Array.Reverse(flip); // stupid fucking BitConverter is little-endian and spits out chinese nonsense otherwise
             for (int i = 0; i < flip.Length; i += 2)
