@@ -27,6 +27,7 @@ namespace Gidrolock_Modbus_Scanner
         int activeEntryIndex;   // entry index for modbus requests/responses
         int activeRowIndex;     // index for actual rows on the panel; separate indexes needed for group requests
         SerialPort port = Modbus.port;
+        Thread poll;
         Thread timer;
 
         bool closed = false;
@@ -81,10 +82,11 @@ namespace Gidrolock_Modbus_Scanner
 
             this.Update();
             FormClosing += (s, e) => { closed = true; };
-            Task.Run(() => AutoPollAsync());
+            poll = new Thread(new ThreadStart(delegate { AutoPollAsync(); }));
+            AutoPollAsync();
         }
 
-        public async void AutoPollAsync()
+        public void AutoPollAsync()
         {
             if (!port.IsOpen)
                 port.Open();
@@ -375,6 +377,7 @@ namespace Gidrolock_Modbus_Scanner
 
                     cb.Items.Add("False");
                     cb.Items.Add("True");
+                    //cb.SelectedIndex = 0; // empty value looks better
                     cb.SelectedIndexChanged += delegate { Console.WriteLine("Selected index changed;"); };
                 }
                 else
