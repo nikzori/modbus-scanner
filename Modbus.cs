@@ -2,12 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO.Ports;
-using System.Runtime.Remoting.Messaging;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Gidrolock_Modbus_Scanner
 {
@@ -107,7 +102,7 @@ namespace Gidrolock_Modbus_Scanner
         #endregion
 
         #region Write Single Coil/Register
-        public static bool WriteSingleAsync(SerialPort port, FunctionCode functionCode, byte slaveID, ushort address, ushort value)
+        public static bool WriteSingleAsync(SerialPort port, FunctionCode functionCode, byte slaveID, ushort address, ushort value, ref byte[] msg)
         {
             //Ensure port is open:
             if (!port.IsOpen)
@@ -131,6 +126,7 @@ namespace Gidrolock_Modbus_Scanner
             Array.Reverse(_value);
 
             byte[] message = BuildWriteSingleMessage(slaveID, (byte)functionCode, address, _value);
+            msg = message;
             Console.WriteLine("Write message: " + ByteArrayToString(message));
             //Send modbus message to Serial Port:
             try
@@ -172,6 +168,9 @@ namespace Gidrolock_Modbus_Scanner
 
         public static string ByteArrayToString(byte[] bytes, bool cleanEmpty = true)
         {
+            if (bytes is null || bytes.Length == 0)
+                return "";
+
             byte[] res;
 
             if (cleanEmpty)

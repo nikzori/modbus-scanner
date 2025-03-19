@@ -105,14 +105,7 @@ namespace Gidrolock_Modbus_Scanner
             CBox_Parity.SelectedIndex = 0;
 
             UpDown_RegLength.Value = 1;
-            /* TCP Setup */
-            /*
-            Radio_SerialPort.Checked = true;
-            GBox_Ethernet.Enabled = false;
-            TBox_IP.Text = "192.168.3.7";
-            TBox_Port.Text = "8887";
-            TBox_Timeout.Text = "3";
-            */
+
             if (Directory.GetDirectories(Application.StartupPath).Contains(Application.StartupPath + "\\Configs") == false)
             {
 
@@ -239,7 +232,7 @@ namespace Gidrolock_Modbus_Scanner
             port.Handshake = Handshake.None;
             port.PortName = CBox_Ports.Text;
             port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex];
-            port.Parity = Parity.None;
+            port.Parity = (Parity)CBox_Parity.SelectedIndex;
             port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
             port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
 
@@ -527,14 +520,12 @@ namespace Gidrolock_Modbus_Scanner
             Console.WriteLine("Set fCode: " + functionCode);
             short address;
             ushort length = (ushort)UpDown_RegLength.Value;
+            byte[] _msg = new byte[8];
             if (Int16.TryParse(TBox_RegAddress.Text, out address))
             {
                 if (functionCode <= 4)
                 {
-                    byte[] _msg = new byte[8];
                     Modbus.BuildReadMessage((byte)UpDown_ModbusID.Value, (byte)functionCode, (ushort)address, (ushort)length, ref _msg);
-                    string msg = Modbus.ByteArrayToString(_msg);
-                    AddLog("Отправка сообщения: " + msg);
                     await ReadRegisterAsync((FunctionCode)functionCode, (ushort)address, length);
                 }
                 else
@@ -545,9 +536,9 @@ namespace Gidrolock_Modbus_Scanner
                         case (FunctionCode.WriteCoil):
                             Console.WriteLine("Trying to force single coil");
                             if (valueLower == "true" || valueLower == "1")
-                                Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0xFF_00);
+                                Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0xFF_00, ref _msg);
                             else if (valueLower == "false" || valueLower == "0")
-                                Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0x00_00);
+                                Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0x00_00, ref _msg);
                             else MessageBox.Show("Неподходящие значения для регистра типа Coil");
                             break;
                         case (FunctionCode.WriteRegister):
@@ -603,7 +594,7 @@ namespace Gidrolock_Modbus_Scanner
 
                             if (canWrite)
                                 Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
-                                        (ushort)value);
+                                        (ushort)value, ref _msg);
                             break;
                         default:
                             MessageBox.Show("WIP");
@@ -612,6 +603,8 @@ namespace Gidrolock_Modbus_Scanner
                     }
                 }
             }
+            string msg = Modbus.ByteArrayToString(_msg);
+            AddLog("Отправка сообщения: " + msg);
         }
 
         private void OnSelectedFunctionChanged(object sender, EventArgs e)
