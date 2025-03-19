@@ -281,8 +281,8 @@ namespace Gidrolock_Modbus_Scanner
                     if (port.BytesToRead > 0)
                     {
                         stopwatch.Restart();
-                        count = offset;
-                        port.Read(buffer, offset, port.BytesToRead);
+                        count = port.BytesToRead;
+                        port.Read(buffer, offset, count);
                         offset += count;
                     }
                 }
