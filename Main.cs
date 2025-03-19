@@ -259,6 +259,7 @@ namespace Gidrolock_Modbus_Scanner
 
                 try
                 {
+                    Console.WriteLine("Deserializing `.json`;");
                     device = JsonConvert.DeserializeObject<Device>(fileContent);
                     Label_ConfigTip.Text = device.name;
                 }
@@ -266,6 +267,7 @@ namespace Gidrolock_Modbus_Scanner
 
                 try
                 {
+                    Console.WriteLine("Connecting to the device;");
                     AddLog("Попытка подключиться к устройству " + device.name);
                     datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
                     datasheet.Show();

@@ -37,7 +37,7 @@ namespace Gidrolock_Modbus_Scanner
             Modbus.ResponseReceived += PublishResponse;
             this.slaveID = slaveID;
             entries = device.entries;
-
+            Console.WriteLine("Initializing datasheet");
             InitializeComponent();
 
             Label_DeviceName.Text = device.name;
@@ -84,7 +84,7 @@ namespace Gidrolock_Modbus_Scanner
             this.Update();
             FormClosing += (s, e) => { closed = true; };
             poll = new Thread(new ThreadStart(delegate { AutoPollAsync(); }));
-            AutoPollAsync();
+            Task.Run(() => AutoPollAsync());
         }
 
         public void AutoPollAsync()
@@ -97,6 +97,11 @@ namespace Gidrolock_Modbus_Scanner
             {
                 if (isPolling)
                 {
+                    if (entryRows[activeRowIndex].chboxPanel is null)
+                    {
+                        activeRowIndex++;
+                        continue;
+                    }
                     if (entryRows[activeRowIndex].chboxPanel.chbox.Checked)
                     {
                         //Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
@@ -165,6 +170,7 @@ namespace Gidrolock_Modbus_Scanner
                     if (activeRowIndex >= entryRows.Count)
                         activeRowIndex = 0;
 
+                    Thread.Sleep(50);
                 }
                 else
                 {
