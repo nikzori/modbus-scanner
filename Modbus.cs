@@ -287,6 +287,7 @@ namespace Gidrolock_Modbus_Scanner
                     }
                 }
                 // assume that the message ended
+                offset = 0;
                 List<byte> message = new List<byte>();
                 int endOfMessage = buffer.Length - 1;
                 for (int i = buffer.Length - 1; i >= 0; i--)
