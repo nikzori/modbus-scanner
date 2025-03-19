@@ -5,7 +5,6 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO.Ports;
 using System.Text.RegularExpressions;
@@ -13,6 +12,8 @@ using System.Net.Sockets;
 using System.IO;
 using Newtonsoft.Json;
 using System.Threading;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Gidrolock_Modbus_Scanner
 {
@@ -45,6 +46,7 @@ namespace Gidrolock_Modbus_Scanner
         public byte[] latestMessage;
 
         DateTime dateTime;
+        Stopwatch stopwatch = new Stopwatch();
         #region Initialization
         public App()
         {
@@ -113,12 +115,11 @@ namespace Gidrolock_Modbus_Scanner
             */
             if (Directory.GetDirectories(Application.StartupPath).Contains(Application.StartupPath + "\\Configs") == false)
             {
-                Task.Delay(1500).ContinueWith(t =>
-                {
-                    MessageBox.Show("Приложение не нашло стандартную папку для конфигураций. Была создана папка 'Configs' в папке с приложением.");
-                    Directory.CreateDirectory(Application.StartupPath + "\\Configs");
-                    Console.WriteLine("New initial directory for OpenFile: " + ofd.InitialDirectory);
-                });
+
+                MessageBox.Show("Приложение не нашло стандартную папку для конфигураций. Была создана папка 'Configs' в папке с приложением.");
+                Directory.CreateDirectory(Application.StartupPath + "\\Configs");
+                Console.WriteLine("New initial directory for OpenFile: " + ofd.InitialDirectory);
+
             }
             ofd.InitialDirectory = Application.StartupPath + "\\Configs";
             path = defaultPath;
@@ -192,14 +193,15 @@ namespace Gidrolock_Modbus_Scanner
                 {
                     Modbus.ReadRegisters(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
                     isAwaitingResponse = true;
-                    await Task.Delay(port.ReadTimeout).ContinueWith(_ =>
+                    stopwatch.Restart();
+                    while (isAwaitingResponse)
                     {
-                        if (isAwaitingResponse)
+                        if (stopwatch.ElapsedMilliseconds > 1000)
                         {
-                            MessageBox.Show("Истекло время ожидания ответа.", "Ошибка");
-                            port.Close();
+                            Console.WriteLine("Response timed out.");
+                            break;
                         }
-                    });
+                    }
                 }
                 catch (Exception err)
                 {

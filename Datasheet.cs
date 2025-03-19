@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO.Ports;
 using System.Linq;
@@ -29,7 +30,7 @@ namespace Gidrolock_Modbus_Scanner
         SerialPort port = Modbus.port;
         Thread poll;
         Thread timer;
-
+        Stopwatch stopwatch = new Stopwatch();
         bool closed = false;
         public Datasheet(byte slaveID)
         {
@@ -91,7 +92,7 @@ namespace Gidrolock_Modbus_Scanner
             if (!port.IsOpen)
                 port.Open();
             port.ReadTimeout = timeout;
-
+            int retryAttempts = 0;
             while (!closed)
             {
                 if (isPolling)
@@ -103,21 +104,27 @@ namespace Gidrolock_Modbus_Scanner
                         isAwaitingResponse = true;
                         Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
 
-                        timer = new Thread(new ThreadStart(delegate
+                        stopwatch.Restart();
+                        while (isAwaitingResponse)
                         {
-                            Thread.Sleep(timeout);
-                            if (isAwaitingResponse)
+                            if (stopwatch.ElapsedMilliseconds > 1000)
                             {
+                                if (retryAttempts > 3)
+                                {
+                                    break;
+                                }
                                 Console.WriteLine("Response timed out.");
-                                isAwaitingResponse = false;
+                                retryAttempts++;
+                                Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+                                stopwatch.Restart();
                             }
-                        }));
-
-                        while (isAwaitingResponse) { continue; }
-
-                        timer.Interrupt(); // not sure how this works so just in case
-                        timer.Abort();
-
+                        }
+                        if (isAwaitingResponse)
+                        {
+                            MessageBox.Show("Устройство не отвечает на сообщения. Проверьте соединение с устройством.");
+                            isPolling = false;
+                            continue;
+                        }
                         try
                         {
                             if (entries[activeEntryIndex].readOnce)
@@ -136,30 +143,33 @@ namespace Gidrolock_Modbus_Scanner
                             port.DiscardInBuffer();
                         }
                         catch (Exception err) { MessageBox.Show(err.Message, "Publish response error"); }
-
                     }
                     if (activeRowIndex >= entryRows.Count)
                         activeRowIndex = 0;
 
-                }
-                else //need to skip multiple dgv entries without accidentaly skipping entries
-                {
-                    if (device.entries[activeEntryIndex].labels is null || device.entries[activeEntryIndex].labels.Count == 0)
-                        activeRowIndex++;
-                    else
+                    else //need to skip multiple dgv entries without accidentaly skipping entries
                     {
-                        for (int i = 0; i < device.entries[activeEntryIndex].labels.Count; i++)
-                        {
+                        if (device.entries[activeEntryIndex].labels is null || device.entries[activeEntryIndex].labels.Count == 0)
                             activeRowIndex++;
+                        else
+                        {
+                            for (int i = 0; i < device.entries[activeEntryIndex].labels.Count; i++)
+                            {
+                                activeRowIndex++;
+                            }
                         }
                     }
-                }
+                    activeEntryIndex++;
+                    if (activeEntryIndex >= device.entries.Count)
+                        activeEntryIndex = 0;
+                    if (activeRowIndex >= entryRows.Count)
+                        activeRowIndex = 0;
 
-                activeEntryIndex++;
-                if (activeEntryIndex >= device.entries.Count)
-                    activeEntryIndex = 0;
-                if (activeRowIndex >= entryRows.Count)
-                    activeRowIndex = 0;
+                }
+                else
+                {
+                    retryAttempts = 0; // reset retry counter
+                }
             }
 
         }
