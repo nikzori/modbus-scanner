@@ -76,7 +76,7 @@
             // Button_StartStop
             // 
             this.Button_StartStop.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.Button_StartStop.Location = new System.Drawing.Point(505, 13);
+            this.Button_StartStop.Location = new System.Drawing.Point(577, 13);
             this.Button_StartStop.Name = "Button_StartStop";
             this.Button_StartStop.Size = new System.Drawing.Size(75, 23);
             this.Button_StartStop.TabIndex = 5;
@@ -94,7 +94,7 @@
             this.flowLayoutPanel1.FlowDirection = System.Windows.Forms.FlowDirection.TopDown;
             this.flowLayoutPanel1.Location = new System.Drawing.Point(12, 81);
             this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(568, 407);
+            this.flowLayoutPanel1.Size = new System.Drawing.Size(640, 407);
             this.flowLayoutPanel1.TabIndex = 8;
             this.flowLayoutPanel1.WrapContents = false;
             // 
@@ -102,7 +102,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(592, 500);
+            this.ClientSize = new System.Drawing.Size(664, 500);
             this.Controls.Add(this.flowLayoutPanel1);
             this.Controls.Add(this.Button_StartStop);
             this.Controls.Add(this.Label_Description);

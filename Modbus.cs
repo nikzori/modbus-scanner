@@ -74,7 +74,7 @@ namespace Gidrolock_Modbus_Scanner
 
                 //Build outgoing modbus message:
                 BuildReadMessage(slaveID, (byte)functionCode, address, length, ref message);
-                
+                Console.WriteLine("Outgoing message: " + ByteArrayToString(message));
                 if (message.Length > 1)
                 {
                     //Send modbus message to Serial Port:
@@ -273,45 +273,36 @@ namespace Gidrolock_Modbus_Scanner
         static int count = 0;
         static void PortDataReceived(object sender, EventArgs e)
         {
+            //reset values on every event call;
+            buffer = new byte[255];
+            offset = 0;
             try
             {
                 stopwatch.Restart();
-                while (stopwatch.ElapsedMilliseconds < 10)
+                while (stopwatch.ElapsedMilliseconds < 20)
                 {
                     if (port.BytesToRead > 0)
                     {
                         stopwatch.Restart();
                         count = port.BytesToRead;
-                        port.Read(buffer, offset, count);
+                        port.Read(buffer, offset, port.BytesToRead);
                         offset += count;
                     }
                 }
                 // assume that the message ended
-                offset = 0;
+                
                 List<byte> message = new List<byte>();
-                int endOfMessage = buffer.Length - 1;
-                for (int i = buffer.Length - 1; i >= 0; i--)
-                {
-                    if (buffer[i] != 0x00)
-                    {
-                        endOfMessage = i;
-                        break;
-                    }
-                }
-                for (int i = 0; i < endOfMessage + 1; i++)
+                for (int i = 0; i < offset; i++)
                 {
                     message.Add(buffer[i]);
                 }
-
                 if (message.Count == 0)
                     return;
 
                 Console.WriteLine("Incoming message: " + ByteArrayToString(message.ToArray(), false));
                 
                 if (!CheckCRC(message.ToArray()))
-                {
-                    Console.WriteLine("Bad CRC or not a modbus message!");
-                }
+                    Console.WriteLine("Bad CRC or not a modbus message!"); 
                 
                 if (message[1] <= 0x04) // read functions
                 {
@@ -336,9 +327,10 @@ namespace Gidrolock_Modbus_Scanner
             {
                 MessageBox.Show(err.Message, "Modbus message reception error");
             }
-            port.DiscardInBuffer();
 
+            port.DiscardInBuffer();
         }
+
 
     }
 
