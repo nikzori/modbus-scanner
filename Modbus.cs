@@ -9,7 +9,7 @@ namespace Gidrolock_Modbus_Scanner
     public static class Modbus
     {
         public static SerialPort port = new SerialPort();
-
+        public static byte slaveID = 0x1E;
         public static event EventHandler<ModbusResponseEventArgs> ResponseReceived = delegate { };
 
         public static void Init()
@@ -330,8 +330,6 @@ namespace Gidrolock_Modbus_Scanner
 
             port.DiscardInBuffer();
         }
-
-
     }
 
     public class ModbusResponseEventArgs : EventArgs

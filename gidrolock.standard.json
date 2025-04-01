@@ -1,0 +1,86 @@
+{
+    "name" : "Gidrolock Standard Wi-Fi RS-485",
+    "description": "Smart valve controller unit with wired and wireless leak sensor support.",
+    "checkEntry": {
+        "registerType": "input",
+        "address": 200,
+        "length": 6,
+        "dataType": "string",
+        "expectedValue": "STW485"
+    },
+    "entries" : [
+        {
+            "name": "Modbus ID",
+            "registerType": "holding",
+            "address": 128,
+            "length": 1,
+            "dataType": "uint16",
+            "readOnce": true,
+            "isModbusID" : true
+        },
+        {
+            "name": "Модель",
+            "registerType": "input",
+            "address": 200,
+            "length": 6,
+            "dataType": "string",
+            "readOnce": true
+        },
+        {
+            "name": "Протечка",
+            "registerType": "coil",
+            "address": 1201,
+            "length": 1,
+            "dataType": "bool"
+        },
+        {
+            "name": "Статус крана",
+            "registerType": "coil",
+            "address": 1202,
+            "length": 1,
+            "dataType": "bool",
+            "valueParse" : {
+                "true" : "Закрыт",
+                "false" : "Открыт"
+            }
+        }, 
+        {
+            "name": "Режим уборки",
+            "registerType": "coil",
+            "address": 3,
+            "length": 1,
+            "dataType": "bool"
+        }, 
+        {
+            "name": "Таймер уборки",
+            "registerType": "holding",
+            "address": 975,
+            "length": 1,
+            "dataType": "uint16"
+        },
+        {
+            "name": "Режим входа #1",
+            "registerType": "coil",
+            "address": 10,
+            "length": 1,
+            "dataType": "bool"
+        },
+        {
+            "name": "Режим входа #2",
+            "registerType": "coil",
+            "address": 11,
+            "length": 1,
+            "dataType": "bool"
+        },
+        {
+            "name" : "Протечка",
+            "registerType": "discrete",
+            "address" : 1343,
+            "length" : 24,
+            "dataType" : "bool",
+            "labels" : [
+                "WSP 1", "WSP 2", "External", "WSR 1", "WSR 2", "WSR 3", "WSR 4", "WSR 5", "WSR 6", "WSR 7", "WSR 8", "WSR 9", "WSR 10", "WSR 11", "WSR 12", "WSR 13", "WSR 14", "WSR 15", "WSR 16", "WSR 17", "WSR 18", "WSR 19", "WSR 20", "WSR 21"
+            ]
+        }
+    ]
+}

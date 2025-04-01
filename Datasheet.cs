@@ -52,7 +52,7 @@ namespace Gidrolock_Modbus_Scanner
                 {
                     if ((e.length == 2 && e.dataType == "uint32") || e.dataType == "string") // this is a single multi-register entry
                     {
-                        entryRows.Add(new EntryRow(rowCount, e, e.name) { Width = flowLayoutPanel1.Width - 25, Height = 25 });
+                        entryRows.Add(new EntryRow(rowCount, e, e.name) { Width = flowLayoutPanel1.Width - 25, Height = 25, Margin = Padding.Empty });
                         rowCount++;
                     }
                     else // this is a collection of registers
@@ -60,8 +60,8 @@ namespace Gidrolock_Modbus_Scanner
                         for (int i = 0; i < e.length; i++)
                         {
                             if (i < e.labels.Count)
-                                entryRows.Add(new EntryRow(rowCount, e, e.labels[i], (i == 0 ? true : false)) { Width = flowLayoutPanel1.Width - 25, Height = 25 });
-                            else entryRows.Add(new EntryRow(rowCount, e, (e.address + i).ToString(), (i == 0 ? true : false)) { Width = flowLayoutPanel1.Width - 25, Height = 25 });
+                                entryRows.Add(new EntryRow(rowCount, e, e.name + ": " + e.labels[i], (i == 0 ? true : false)) { Width = flowLayoutPanel1.Width - 25, Height = 25, Margin = Padding.Empty });
+                            else entryRows.Add(new EntryRow(rowCount, e, (e.address + i).ToString(), (i == 0 ? true : false)) { Width = flowLayoutPanel1.Width - 25, Height = 25, Margin = Padding.Empty });
 
                             rowCount++;
                         }
@@ -70,7 +70,7 @@ namespace Gidrolock_Modbus_Scanner
                 }
                 else
                 {
-                    entryRows.Add(new EntryRow(rowCount, e, e.name) { Width = flowLayoutPanel1.Width - 25, Height = 25 });
+                    entryRows.Add(new EntryRow(rowCount, e, e.name) { Width = flowLayoutPanel1.Width - 25, Height = 25, Margin = Padding.Empty });
                     rowCount++;
                 }
             }
@@ -145,7 +145,7 @@ namespace Gidrolock_Modbus_Scanner
                             catch (Exception err) { MessageBox.Show(err.Message, "Publish response error"); }
                         }
                     }
-                    
+
                     activeEntryIndex++;
                     activeRowIndex++;
                     Console.WriteLine("Next entry index: " + activeEntryIndex);
@@ -162,95 +162,26 @@ namespace Gidrolock_Modbus_Scanner
 
         void ParseSingle()
         {
-            switch (entries[activeEntryIndex].dataType)
-            {
-                case "bool":
-                    //no valueParse keys
-                    if (entries[activeEntryIndex].valueParse is null || entries[activeEntryIndex].valueParse.Keys.Count == 0)
-                        entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False"); }));
-
-                    else try
-                        {
-                            entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(latestMessage.Data[0] > 0x00 ? entries[activeEntryIndex].valueParse["true"] : entries[activeEntryIndex].valueParse["false"]); }));
-                        }
-                        catch (Exception err)
-                        {
-                            MessageBox.Show(err.Message);
-                            entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(latestMessage.Data[0] > 0x00 ? "True" : "False"); }));
-                        }
-                    break;
-                case ("uint16"):
-                    ushort value = BitConverter.ToUInt16(latestMessage.Data, 0);
-                    if (entries[activeEntryIndex].labels is null || entries[activeEntryIndex].labels.Count == 0) // single value
-                    {
-                        if (entries[activeEntryIndex].valueParse is null || entries[activeEntryIndex].valueParse.Keys.Count == 0)
-                        {
-                            //Array.Reverse(e.Data); // this was necessary, but something changed, idk
-                            //Console.WriteLine("ushort parsed value: " + value);
-                            entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(value.ToString()); }));
-                        }
-                        else
-                        {
-                            try
-                            {
-                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(entries[activeEntryIndex].valueParse[value.ToString()]); }));
-                            }
-                            catch (Exception err)
-                            {
-                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(value.ToString()); }));
-                                MessageBox.Show("Error parsing uint value at address: " + entries[activeEntryIndex].address + "; " + err.Message, "uint16 parse");
-                            }
-                        }
-                    }
-                    break;
-
-                case ("uint32"):
-                    Array.Reverse(latestMessage.Data);
-                    entryRows[activeRowIndex].SetValue(BitConverter.ToUInt32(latestMessage.Data, 0).ToString());
-                    //activeRowIndex++;
-                    break;
-
-                case ("string"):
-                    List<byte> bytes = new List<byte>();
-                    for (int i = 0; i < latestMessage.Data.Length; i++)
-                    {
-                        if (latestMessage.Data[i] != 0)
-                            bytes.Add(latestMessage.Data[i]);
-                    }
-                    bytes.Reverse();
-                    string str = System.Text.Encoding.UTF8.GetString(bytes.ToArray());
-                    entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(str); }));
-                    //activeRowIndex++;
-                    break;
-                default:
-                    MessageBox.Show("Wrong data type set for entry " + entries[activeEntryIndex].name);
-                    //activeRowIndex++;
-                    break;
-            }
-            //activeRowIndex++;
+            entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(latestMessage.Data); }));
         }
         void ParseGroup()
         {
             switch (entries[activeEntryIndex].dataType)
             {
                 case "bool":
-                    List<bool> values = new List<bool>();
+                    List<byte> values = new List<byte>();
                     for (int i = 0; i < dbc; i++)
                     {
                         for (int j = 0; j < 8; j++)
                         {
-                            bool res = (((latestMessage.Data[i] >> j) & 0x01) >= 1) ? true : false;
+                            byte res = (byte)((latestMessage.Data[i] >> j) & 0x01);
                             values.Add(res);
                         }
                     }
-                    Console.Write("values: ");
-                    for (int i = 0; i < values.Count; i++)
-                        Console.Write(values[i].ToString() + " ");
-                    Console.WriteLine("");
 
                     for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
                     {
-                        entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate {entryRows[activeRowIndex].SetValue(values[i].ToString()); }));
+                        entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(new byte[] { values[i] }); }));
                         activeRowIndex++;
                     }
 
@@ -258,36 +189,25 @@ namespace Gidrolock_Modbus_Scanner
                 case "uint16":
                     try
                     {
-                        List<ushort> _values = new List<ushort>();
+                        List<byte[]> bytes = new List<byte[]>();
                         for (int i = 0; i < dbc; i += 2)
                         {
-                            ushort s = BitConverter.ToUInt16(latestMessage.Data, i);
-                            _values.Add(s);
+                            byte[] pair = new byte[2];
+                            pair[0] = latestMessage.Data[i];
+                            pair[1] = latestMessage.Data[i + 1];
+                            bytes.Add(pair);
                         }
                         //Console.WriteLine("ushort values count: " + values.Count);
                         //Console.WriteLine("entity labels count: " + entries[activeEntryIndex].labels.Count);
                         for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
                         {
-                            if (device.entries[activeEntryIndex].valueParse != null)
-                            {
-                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate
-                                {
-                                    entryRows[activeRowIndex].SetValue(_values[i].ToString());
-                                }));
-                            }
-                            else
-                            {
-                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate
-                                {
-                                    entryRows[activeRowIndex].SetValue(_values[i].ToString());
-                                }));
-                            }
+                            entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(bytes[i]); }));
                             activeRowIndex++;
                         }
                     }
                     catch (Exception err)
                     {
-                        entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue("Error"); }));
+                        entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].valueControl.Text = "Error"; }));
                         MessageBox.Show("Error parsing uint value at address: " + entries[activeEntryIndex].address + "; " + err.Message, "uint16 group req parse");
                     }
                     break;
@@ -314,6 +234,10 @@ namespace Gidrolock_Modbus_Scanner
 
         public class EntryRow : FlowLayoutPanel
         {
+            public byte[] data;
+            public string dataType;
+            Dictionary<string, string> valueParse;
+
             public Control checkbox;
             public Label numberLabel = new Label() { Height = 25, Width = 30, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
             public Label addressLabel = new Label() { Height = 25, Width = 60, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
@@ -321,17 +245,41 @@ namespace Gidrolock_Modbus_Scanner
             public Control valueControl = null;
             public Button valueButton = null;
 
-            public void SetValue(string value)
+            public void SetValue(byte[] value) 
             {
+                Array.Reverse(value); // for some reason the incoming array gets reversed *specifically* when it gets here
+
+                //Console.WriteLine("byte array for entry: " + Modbus.ByteArrayToString(value, false));
                 if (valueControl is null)
                     return;
-
-                else valueControl.Text = value;
+                switch (dataType)
+                {
+                    case "uint16":
+                        valueControl.Text = ((value[0] << 8) + value[1]).ToString();
+                        break;
+                    case "uint32":
+                        valueControl.Text = ((value[0] << 24) + (value[1] << 16) + (value[2] << 8) + value[3]).ToString();
+                        break;
+                    case "string":
+                        valueControl.Text = App.ByteArrayToUnicode(value);
+                        break;
+                    case "bool":
+                        valueControl.Text = value[0] > 0x00 ? "true" : "false";
+                        break;
+                    default:
+                        MessageBox.Show("Неизвестный или неправильный тип данных в конфигурации для адреса " + addressLabel.Text);
+                        break;
+                }
                 this.Update();
             }
 
             public EntryRow(int number, Entry entry, string name, bool hasCheckbox = true)
             {
+                if (entry.valueParse != null)
+                    this.valueParse = entry.valueParse;
+
+                dataType = entry.dataType;
+
                 this.Padding = new Padding(5, 0, 0, 0);
                 this.FlowDirection = FlowDirection.LeftToRight;
                 if (number % 2 == 0)
@@ -359,6 +307,42 @@ namespace Gidrolock_Modbus_Scanner
                     valueButton.Click += delegate
                     {
                         TextBox tbox = valueControl as TextBox;
+                        string valueLower = tbox.Text.ToLower();
+                        short value = 0;
+                        bool canWrite = false;
+                        if (App.IsDec(valueLower))
+                        {
+                            try { value = Convert.ToInt16(valueLower); canWrite = true; }
+                            catch (Exception err) { MessageBox.Show(err.Message); }
+                        }
+                        else if (App.IsHex(valueLower))
+                        {
+                            Console.WriteLine("Got hex value");
+                            for (int i = 0; i < valueLower.Length; i++)
+                            {
+                                if (valueLower[i] == 'x')
+                                {
+                                    valueLower = valueLower.Remove(i, 1);
+                                    break;
+                                }
+                            }
+                            try { value = Convert.ToInt16(valueLower, 16); canWrite = true; }
+                            catch (Exception err) { MessageBox.Show(err.Message); }
+                        }
+                        else if (App.IsBin(valueLower))
+                        {
+                            Console.WriteLine("Got bin value");
+                            for (int i = 0; i < valueLower.Length; i++)
+                            {
+                                if (valueLower[i] == 'b')
+                                {
+                                    valueLower = valueLower.Remove(i, 1);
+                                    break;
+                                }
+                            }
+                            try { value = Convert.ToInt16(valueLower, 2); canWrite = true; }
+                            catch (Exception err) { MessageBox.Show(err.Message); }
+                        }
                         Console.WriteLine("Setting a holding register to " + tbox.Text);
                     };
                 }

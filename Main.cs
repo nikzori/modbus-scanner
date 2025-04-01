@@ -206,6 +206,7 @@ namespace Gidrolock_Modbus_Scanner
 
         private async void ButtonConnect_Click(object sender, EventArgs e)
         {
+            Modbus.slaveID = (byte)UpDown_ModbusID.Value;
             progressBar1.Value = 0;
             if (path == String.Empty)
             {
