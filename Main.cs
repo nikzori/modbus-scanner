@@ -21,7 +21,7 @@ namespace Gidrolock_Modbus_Scanner
     {
         public static int[] BaudRate = new int[]
         {
-            110, 300, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600, 76800, 115200, 230300, 460800, 921600
+           12, 24, 48, 96, 144, 192, 384, 576, 1152
         };
         public static int[] DataBits = new int[] { 7, 8 };
         Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
@@ -71,23 +71,17 @@ namespace Gidrolock_Modbus_Scanner
             //CBox_Function.Items.Add("10 Write Multiple Registers");
             CBox_Function.SelectedItem = CBox_Function.Items[0];
 
-            CBox_BaudRate.Items.Add("110");
-            CBox_BaudRate.Items.Add("300");
+
             CBox_BaudRate.Items.Add("1200");
             CBox_BaudRate.Items.Add("2400");
             CBox_BaudRate.Items.Add("4800");
             CBox_BaudRate.Items.Add("9600");
             CBox_BaudRate.Items.Add("14400");
             CBox_BaudRate.Items.Add("19200");
-            CBox_BaudRate.Items.Add("28800");
             CBox_BaudRate.Items.Add("38400");
             CBox_BaudRate.Items.Add("57600");
-            CBox_BaudRate.Items.Add("76800");
             CBox_BaudRate.Items.Add("115200");
-            CBox_BaudRate.Items.Add("230300");
-            CBox_BaudRate.Items.Add("460800");
-            CBox_BaudRate.Items.Add("921600");
-            CBox_BaudRate.SelectedIndex = 5;
+            CBox_BaudRate.SelectedIndex = 3;
 
             CBox_DataBits.Items.Add("7");
             CBox_DataBits.Items.Add("8");
@@ -153,7 +147,7 @@ namespace Gidrolock_Modbus_Scanner
         #endregion
 
         // Send a custom message
-        async Task ReadRegisterAsync(FunctionCode functionCode, ushort address, ushort length)
+        async Task<bool> ReadRegisterAsync(FunctionCode functionCode, ushort address, ushort length)
         {
             if (CBox_Ports.Text == "")
                 MessageBox.Show("Необходимо выбрать COM порт.", "Ошибка", MessageBoxButtons.OK);
@@ -166,7 +160,7 @@ namespace Gidrolock_Modbus_Scanner
 
             port.Handshake = Handshake.None;
             port.PortName = CBox_Ports.Text;
-            port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex];
+            port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex] * 100;
             port.Parity = Parity.None;
             port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
             port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
@@ -184,6 +178,7 @@ namespace Gidrolock_Modbus_Scanner
             {
                 try
                 {
+                    int attempts = 0;
                     Modbus.ReadRegisters(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
                     isAwaitingResponse = true;
                     stopwatch.Restart();
@@ -191,10 +186,18 @@ namespace Gidrolock_Modbus_Scanner
                     {
                         if (stopwatch.ElapsedMilliseconds > 1000)
                         {
-                            Console.WriteLine("Response timed out.");
-                            break;
+                            if (attempts > 2)
+                            {
+                                AddLog("Нет ответа от устройства.");
+                                return false;
+                            }
+                            AddLog("Истекло время ожидания ответа от устройства.");
+                            stopwatch.Restart();
+                            Modbus.ReadRegisters(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
+                            
                         }
                     }
+                    return true;
                 }
                 catch (Exception err)
                 {
@@ -202,6 +205,7 @@ namespace Gidrolock_Modbus_Scanner
                     MessageBox.Show(err.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+            return false;
         }
 
         private async void ButtonConnect_Click(object sender, EventArgs e)
@@ -232,7 +236,7 @@ namespace Gidrolock_Modbus_Scanner
 
             port.Handshake = Handshake.None;
             port.PortName = CBox_Ports.Text;
-            port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex];
+            port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex] * 100;
             port.Parity = (Parity)CBox_Parity.SelectedIndex;
             port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
             port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
@@ -270,7 +274,8 @@ namespace Gidrolock_Modbus_Scanner
                 {
                     Console.WriteLine("Connecting to the device;");
                     AddLog("Попытка подключиться к устройству " + device.name);
-                    datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
+                    if (await ReadRegisterAsync((FunctionCode)device.checkEntry.registerType, (byte)UpDown_ModbusID.Value, device.checkEntry.length))
+                    datasheet = new Datasheet((byte)UpDown_ModbusID.Value, CBox_BaudRate.SelectedIndex);
                     datasheet.Show();
                 }
                 catch (Exception err) { MessageBox.Show(err.Message); }
@@ -403,7 +408,7 @@ namespace Gidrolock_Modbus_Scanner
                 try
                 {
                     AddLog("Попытка подключиться к устройству " + device.name);
-                    datasheet = new Datasheet((byte)UpDown_ModbusID.Value);
+                    datasheet = new Datasheet((byte)UpDown_ModbusID.Value, CBox_BaudRate.SelectedIndex);
                     datasheet.Show();
                 }
                 catch (Exception err) { MessageBox.Show(err.Message); }
@@ -506,7 +511,7 @@ namespace Gidrolock_Modbus_Scanner
 
             port.Handshake = Handshake.None;
             port.PortName = CBox_Ports.Text;
-            port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex];
+            port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex] * 100;
             port.Parity = Parity.None;
             port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
             port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
@@ -517,7 +522,7 @@ namespace Gidrolock_Modbus_Scanner
 
             message = new byte[255];
             port.Open();
-
+            Console.WriteLine(port.BaudRate);
 
             int functionCode = CBox_Function.SelectedIndex + 1;
             Console.WriteLine("Set fCode: " + functionCode);

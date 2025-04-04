@@ -14,6 +14,7 @@ namespace Gidrolock_Modbus_Scanner
         public string description;
         public List<Entry> entries;
         public CheckEntry checkEntry;
+        //TODO: add separate baudrate entry and ID address entry
 
         public Device(string name, string description, CheckEntry checkEntry, List<Entry> entries)
         {
@@ -33,7 +34,6 @@ namespace Gidrolock_Modbus_Scanner
         public List<string> labels;
         public Dictionary<string, string> valueParse;
         public bool readOnce;
-        public bool isModbusID;
 
         public Entry(string name, RegisterType registerType, ushort address, ushort length = 1, string dataType = "uint16", List<string> labels = null, Dictionary<string, string> valueParse = null, bool readOnce = false, bool isModbusID = false)
         {
@@ -46,7 +46,6 @@ namespace Gidrolock_Modbus_Scanner
             this.valueParse = valueParse;
 
             this.readOnce = readOnce;
-            this.isModbusID = isModbusID;
         }
     }
     public struct CheckEntry

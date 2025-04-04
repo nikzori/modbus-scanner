@@ -102,6 +102,46 @@ namespace Gidrolock_Modbus_Scanner
         #endregion
 
         #region Write Single Coil/Register
+        public static bool WriteSingleAsync(SerialPort port, FunctionCode functionCode, byte slaveID, ushort address, ushort value)
+        {
+            //Ensure port is open:
+            if (!port.IsOpen)
+            {
+                try
+                {
+                    port.Open();
+                }
+                catch (Exception err)
+                {
+                    MessageBox.Show(err.Message);
+                    return false;
+                }
+            }
+            //Clear in/out buffers:
+            port.DiscardOutBuffer();
+            port.DiscardInBuffer();
+
+            //Build outgoing modbus message:
+            byte[] _value = BitConverter.GetBytes(value);
+            Array.Reverse(_value);
+
+            byte[] message = BuildWriteSingleMessage(slaveID, (byte)functionCode, address, _value);
+            Console.WriteLine("Write message: " + ByteArrayToString(message));
+            //Send modbus message to Serial Port:
+            try
+            {
+                port.Write(message, 0, message.Length);
+                Console.WriteLine("Message sent successfully.");
+                return true;
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message);
+                port.Close();
+                return false;
+            }
+
+        }
         public static bool WriteSingleAsync(SerialPort port, FunctionCode functionCode, byte slaveID, ushort address, ushort value, ref byte[] msg)
         {
             //Ensure port is open:

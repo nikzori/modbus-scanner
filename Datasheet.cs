@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO.Ports;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -15,33 +16,44 @@ namespace Gidrolock_Modbus_Scanner
 {
     public partial class Datasheet : Form
     {
-        bool isPolling = false;
-        bool isAwaitingResponse = false;
-        ModbusResponseEventArgs latestMessage = null;
+        public static bool isPolling = false;
+        static bool isAwaitingResponse = false;
+        static ModbusResponseEventArgs latestMessage = null;
 
         int timeout = 3000;
-        int dbc; //data byte count
-        byte slaveID;
+        static int dbc; //data byte count
+        static byte slaveID;
         Device device = App.device;
-        List<Entry> entries;
-        List<EntryRow> entryRows;
-        int activeEntryIndex;   // entry index for modbus requests/responses
-        int activeRowIndex;     // index for actual rows on the panel; separate indexes needed for group requests
-        SerialPort port = Modbus.port;
-        Stopwatch stopwatch = new Stopwatch();
+        static List<Entry> entries;
+        static List<EntryRow> entryRows;
+        static int activeEntryIndex;   // entry index for modbus requests/responses
+        static int activeRowIndex;     // index for actual rows on the panel; separate indexes needed for group requests
+        static SerialPort port = Modbus.port;
+        static Stopwatch stopwatch = new Stopwatch();
         bool closed = false;
-        public Datasheet(byte slaveID)
+        public Datasheet(byte slaveID, int baudrateIndex)
         {
             Modbus.ResponseReceived += PublishResponse;
-            this.slaveID = slaveID;
+            Datasheet.slaveID = slaveID;
             entries = device.entries;
             Console.WriteLine("Initializing datasheet");
             InitializeComponent();
 
             Label_DeviceName.Text = device.name;
             Label_Description.Text = device.description;
+            
+            cbBaudrate.Items.Add("1200");
+            cbBaudrate.Items.Add("2400");
+            cbBaudrate.Items.Add("4800");
+            cbBaudrate.Items.Add("9600");
+            cbBaudrate.Items.Add("14400");
+            cbBaudrate.Items.Add("19200");
+            cbBaudrate.Items.Add("38400");
+            cbBaudrate.Items.Add("57600");
+            cbBaudrate.Items.Add("115200");
+            cbBaudrate.SelectedIndex = baudrateIndex;
 
-
+            udSlaveId.Value = slaveID;
 
             int rowCount = 0;
 
@@ -89,82 +101,120 @@ namespace Gidrolock_Modbus_Scanner
             if (!port.IsOpen)
                 port.Open();
             port.ReadTimeout = timeout;
-            int retryAttempts = 0;
+
             while (!closed)
             {
                 if (isPolling)
                 {
-                    Console.WriteLine("Poll tick");
+                    //Console.WriteLine("Poll tick");
                     if (activeEntryIndex >= device.entries.Count || activeRowIndex >= entryRows.Count)
                     {
-                        Console.WriteLine("Resetting indexes");
+                        //Console.WriteLine("Resetting indexes");
                         activeEntryIndex = 0;
                         activeRowIndex = 0;
                     }
-                    Console.WriteLine("Polling for entry index " + activeEntryIndex + "; row index " + activeRowIndex);
+                    //Console.WriteLine("Polling for entry index " + activeEntryIndex + "; row index " + activeRowIndex);
                     if (entryRows[activeRowIndex].checkbox is CheckBox)
                     {
                         CheckBox chbx = entryRows[activeRowIndex].checkbox as CheckBox;
                         if (chbx.Checked)
                         {
-                            Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
+                            //Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
                             Entry entry = entries[activeEntryIndex];
-                            isAwaitingResponse = true;
-                            Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
-
-                            stopwatch.Restart();
-                            while (isAwaitingResponse)
-                            {
-                                if (stopwatch.ElapsedMilliseconds > 1000)
-                                {
-                                    if (retryAttempts > 3)
-                                        break;
-
-                                    Console.WriteLine("Response timed out.");
-                                    retryAttempts++;
-                                    Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
-                                    stopwatch.Restart();
-                                }
-                            }
-                            if (isAwaitingResponse)
-                            {
-                                MessageBox.Show("Устройство не отвечает на сообщения. Проверьте соединение с устройством.");
-                                isPolling = false;
-                                continue;
-                            }
-                            try
-                            {
-                                if (entries[activeEntryIndex].readOnce)
-                                    entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { chbx.Checked = false; }));
-
-                                dbc = latestMessage.Message[2]; // data byte count
-                                if (entries[activeEntryIndex].labels is null || entries[activeEntryIndex].labels.Count == 0)
-                                    ParseSingle(); // assume that no labels = 1 entry
-                                else ParseGroup();
-                            }
-                            catch (Exception err) { MessageBox.Show(err.Message, "Publish response error"); }
+                            PollForEntry(entry);
+                            if (entries[activeEntryIndex].readOnce)
+                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { chbx.Checked = false; }));
                         }
                     }
 
                     activeEntryIndex++;
                     activeRowIndex++;
-                    Console.WriteLine("Next entry index: " + activeEntryIndex);
+                    //Console.WriteLine("Next entry index: " + activeEntryIndex);
                     Thread.Sleep(50);
                 }
 
-                else
-                {
-                    retryAttempts = 0; // reset retry counter
-                }
+
             }
 
         }
 
-        void ParseSingle()
+        public static void PollForEntry(Entry entry)
+        {
+            int retryAttempts = 0;
+            isAwaitingResponse = true;
+            Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+
+            stopwatch.Restart();
+            while (isAwaitingResponse)
+            {
+                if (stopwatch.ElapsedMilliseconds > 1000)
+                {
+                    if (retryAttempts > 3)
+                        break;
+
+                    //Console.WriteLine("Response timed out.");
+                    retryAttempts++;
+                    Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+                    stopwatch.Restart();
+                }
+            }
+            if (isAwaitingResponse)
+            {
+                MessageBox.Show("Устройство не отвечает на сообщения. Проверьте соединение с устройством.");
+                isPolling = false;
+                isAwaitingResponse = false;
+            }
+            try
+            {
+                if (latestMessage != null)
+                {
+                    dbc = latestMessage.Message[2]; // data byte count
+                    if (entries[activeEntryIndex].labels is null || entries[activeEntryIndex].labels.Count == 0)
+                        ParseSingle(); // assume that no labels = 1 entry
+                    else ParseGroup();
+                }
+            }
+            catch (Exception err) { MessageBox.Show(err.Message, "Publish response error"); }
+        }
+        public static void PollForEntry(EntryRow entryRow)
+        {
+            Entry entry = entryRow.entry;
+            int retryAttempts = 0;
+            isAwaitingResponse = true;
+            Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+
+            stopwatch.Restart();
+            while (isAwaitingResponse)
+            {
+                if (stopwatch.ElapsedMilliseconds > 1000)
+                {
+                    if (retryAttempts > 3)
+                        break;
+
+                    //Console.WriteLine("Response timed out.");
+                    retryAttempts++;
+                    Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+                    stopwatch.Restart();
+                }
+            }
+            if (isAwaitingResponse)
+            {
+                MessageBox.Show("Устройство не отвечает на сообщения. Проверьте соединение с устройством.");
+                isPolling = false;
+            }
+            try
+            {
+                //dbc = latestMessage.Message[2]; // data byte count
+                entryRow.Invoke(new MethodInvoker(delegate { entryRow.SetValue(latestMessage.Data); }));
+            }
+            catch (Exception err) { MessageBox.Show(err.Message, "Publish error on toggle"); }
+        }
+
+        static void ParseSingle()
         {
             entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(latestMessage.Data); }));
         }
-        void ParseGroup()
+        static void ParseGroup()
         {
             switch (entries[activeEntryIndex].dataType)
             {
@@ -228,140 +278,271 @@ namespace Gidrolock_Modbus_Scanner
         private void Button_StartStop_Click(object sender, EventArgs e)
         {
             isPolling = !isPolling;
-            Button_StartStop.Text = (isPolling ? "Стоп" : "Старт");
+            Button_StartStop.Text = (isPolling ? "Стоп" : "Автоопрос");
         }
 
-
-        public class EntryRow : FlowLayoutPanel
+        public static void SetPolling(bool value)
         {
-            public byte[] data;
-            public string dataType;
-            Dictionary<string, string> valueParse;
+            isPolling = value;
+        }
 
-            public Control checkbox;
-            public Label numberLabel = new Label() { Height = 25, Width = 30, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
-            public Label addressLabel = new Label() { Height = 25, Width = 60, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
-            public Label nameLabel = new Label() { Height = 25, Width = 220, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
-            public Control valueControl = null;
-            public Button valueButton = null;
-
-            public void SetValue(byte[] value) 
+        private async void buttonSetId_Click(object sender, EventArgs e)
+        {
+            ushort value = (byte)udSlaveId.Value;
+            await Task.Run(() =>
             {
-                Array.Reverse(value); // for some reason the incoming array gets reversed *specifically* when it gets here
+                bool _isPolling = isPolling;
+                if (isPolling)
+                {
+                    SetPolling(false);
+                    Thread.Sleep(150); // wait for polling to finish
+                }
 
-                //Console.WriteLine("byte array for entry: " + Modbus.ByteArrayToString(value, false));
-                if (valueControl is null)
+                isAwaitingResponse = true;
+                int retries = 0;
+                stopwatch.Restart();
+                Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteRegister, slaveID, 128, value);
+
+                while (isAwaitingResponse)
+                {
+                    if (stopwatch.ElapsedMilliseconds > 1000)
+                    {
+                        if (retries > 3)
+                            break;
+                        Console.WriteLine("Response for slave ID change timed out. isAwaitingResponse = " + isAwaitingResponse.ToString());
+                        retries++;
+                        stopwatch.Restart();
+                        Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteRegister, slaveID, 128, value);
+                    }
+                }
+
+                if (isAwaitingResponse)
+                {
+                    MessageBox.Show("Устройство не отвечает на сообщения. Проверьте соединение с устройством.");
                     return;
-                switch (dataType)
-                {
-                    case "uint16":
-                        valueControl.Text = ((value[0] << 8) + value[1]).ToString();
-                        break;
-                    case "uint32":
-                        valueControl.Text = ((value[0] << 24) + (value[1] << 16) + (value[2] << 8) + value[3]).ToString();
-                        break;
-                    case "string":
-                        valueControl.Text = App.ByteArrayToUnicode(value);
-                        break;
-                    case "bool":
-                        valueControl.Text = value[0] > 0x00 ? "true" : "false";
-                        break;
-                    default:
-                        MessageBox.Show("Неизвестный или неправильный тип данных в конфигурации для адреса " + addressLabel.Text);
-                        break;
                 }
-                this.Update();
-            }
 
-            public EntryRow(int number, Entry entry, string name, bool hasCheckbox = true)
+                slaveID = (byte)udSlaveId.Value;
+                isPolling = _isPolling;
+            });
+        }
+
+        private async void buttonSetSpeed_Click(object sender, EventArgs e)
+        {
+            ushort brate = (ushort)App.BaudRate[cbBaudrate.SelectedIndex];
+            await Task.Run(() =>
             {
-                if (entry.valueParse != null)
-                    this.valueParse = entry.valueParse;
-
-                dataType = entry.dataType;
-
-                this.Padding = new Padding(5, 0, 0, 0);
-                this.FlowDirection = FlowDirection.LeftToRight;
-                if (number % 2 == 0)
-                    this.BackColor = Color.White;
-                else this.BackColor = Color.LightGray;
-
-                if (hasCheckbox)
-                    checkbox = new CheckBox() { Width = 25, Height = 20, Margin = Padding.Empty };
-                else checkbox = new Label() { Width = 25, Height = 20, Margin = Padding.Empty };
-                checkbox.Parent = this;
-
-
-                numberLabel.Parent = this;
-                addressLabel.Parent = this;
-                nameLabel.Parent = this;
-
-                numberLabel.Text = number.ToString();
-                addressLabel.Text = entry.address.ToString();
-                nameLabel.Text = name.ToString();
-
-                if (entry.registerType == RegisterType.Holding)
+                bool _isPolling = isPolling;
+                if (isPolling)
                 {
-                    valueControl = new TextBox() { Height = 25, Width = 120, Margin = Padding.Empty };
-                    valueButton = new Button() { Height = 25, Width = 120, Margin = Padding.Empty, Text = "Задать" };
-                    valueButton.Click += delegate
-                    {
-                        TextBox tbox = valueControl as TextBox;
-                        string valueLower = tbox.Text.ToLower();
-                        short value = 0;
-                        bool canWrite = false;
-                        if (App.IsDec(valueLower))
-                        {
-                            try { value = Convert.ToInt16(valueLower); canWrite = true; }
-                            catch (Exception err) { MessageBox.Show(err.Message); }
-                        }
-                        else if (App.IsHex(valueLower))
-                        {
-                            Console.WriteLine("Got hex value");
-                            for (int i = 0; i < valueLower.Length; i++)
-                            {
-                                if (valueLower[i] == 'x')
-                                {
-                                    valueLower = valueLower.Remove(i, 1);
-                                    break;
-                                }
-                            }
-                            try { value = Convert.ToInt16(valueLower, 16); canWrite = true; }
-                            catch (Exception err) { MessageBox.Show(err.Message); }
-                        }
-                        else if (App.IsBin(valueLower))
-                        {
-                            Console.WriteLine("Got bin value");
-                            for (int i = 0; i < valueLower.Length; i++)
-                            {
-                                if (valueLower[i] == 'b')
-                                {
-                                    valueLower = valueLower.Remove(i, 1);
-                                    break;
-                                }
-                            }
-                            try { value = Convert.ToInt16(valueLower, 2); canWrite = true; }
-                            catch (Exception err) { MessageBox.Show(err.Message); }
-                        }
-                        Console.WriteLine("Setting a holding register to " + tbox.Text);
-                    };
+                    SetPolling(false);
+                    Thread.Sleep(150); // wait for polling to finish
                 }
-                else if (entry.registerType == RegisterType.Coil)
+                isAwaitingResponse = true;
+                int retries = 0;
+                
+                Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteRegister, slaveID, 110, brate);
+                stopwatch.Restart();
+
+                while (isAwaitingResponse)
                 {
-                    valueControl = new Label() { Height = 25, Width = 120, Margin = Padding.Empty, Text = "n/a" };
-                    valueButton = new Button() { Height = 25, Width = 120, Margin = Padding.Empty, Text = "Переключить" };
-                    valueButton.Click += delegate
+                    if (stopwatch.ElapsedMilliseconds > 1000)
                     {
-                        Console.WriteLine("Toggling a coil");
-                    };
+                        if (retries > 2)
+                            break;
+                        Console.WriteLine("Response for baudrate change timed out.");
+                        retries++;
+                        Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteRegister, slaveID, 110, brate);
+                        stopwatch.Restart();
+                    }
                 }
-                else valueControl = new Label() { Height = 25, Width = 120, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty, Text = "n/a" };
 
-                valueControl.Parent = this;
+                if (isAwaitingResponse)
+                {
+                    MessageBox.Show("Устройство не отвечает на сообщения. Проверьте соединение с устройством.");
+                    return;
+                }
 
-                if (valueButton != null)
-                    valueButton.Parent = this;
+                port.Close();
+                port.BaudRate = brate * 100;
+                port.Open();
+
+                isPolling = _isPolling;
+            });
+        }
+    }
+    public class EntryRow : FlowLayoutPanel
+    {
+        public byte[] data;
+        public string dataType;
+        public Entry entry;
+
+        public Control checkbox;
+        public Label numberLabel = new Label() { Height = 25, Width = 30, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
+        public Label addressLabel = new Label() { Height = 25, Width = 60, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
+        public Label nameLabel = new Label() { Height = 25, Width = 220, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
+        public Control valueControl = null;
+        public Button valueButton = null;
+
+        public void SetValue(byte[] value)
+        {
+            Array.Reverse(value); // for some reason the incoming array gets reversed *specifically* when it gets here
+                                  //Console.WriteLine("byte array for entry: " + Modbus.ByteArrayToString(value, false));
+            data = value;
+
+            if (valueControl is null)
+                return;
+            switch (dataType)
+            {
+                case "uint16":
+                    valueControl.Text = ((value[0] << 8) + value[1]).ToString();
+                    break;
+                case "uint32":
+                    valueControl.Text = ((value[0] << 24) + (value[1] << 16) + (value[2] << 8) + value[3]).ToString();
+                    break;
+                case "string":
+                    valueControl.Text = App.ByteArrayToUnicode(value);
+                    break;
+                case "bool":
+                    valueControl.Text = value[0] > 0x00 ? "true" : "false";
+                    break;
+                default:
+                    MessageBox.Show("Неизвестный или неправильный тип данных в конфигурации для адреса " + addressLabel.Text);
+                    break;
             }
+            this.Update();
+        }
+
+        public EntryRow(int number, Entry entry, string name, bool hasCheckbox = true)
+        {
+            this.entry = entry;
+
+            dataType = entry.dataType;
+
+            this.Padding = new Padding(5, 0, 0, 0);
+            this.FlowDirection = FlowDirection.LeftToRight;
+            if (number % 2 == 0)
+                this.BackColor = Color.White;
+            else this.BackColor = Color.LightGray;
+
+            if (hasCheckbox)
+                checkbox = new CheckBox() { Width = 25, Height = 20, Margin = Padding.Empty };
+            else checkbox = new Label() { Width = 25, Height = 20, Margin = Padding.Empty };
+            checkbox.Parent = this;
+
+
+            numberLabel.Parent = this;
+            addressLabel.Parent = this;
+            nameLabel.Parent = this;
+
+            numberLabel.Text = number.ToString();
+            addressLabel.Text = entry.address.ToString();
+            nameLabel.Text = name.ToString();
+
+            if (entry.registerType == RegisterType.Holding)
+            {
+                valueControl = new TextBox() { Height = 25, Width = 120, Margin = Padding.Empty };
+                valueButton = new Button() { Height = 25, Width = 120, Margin = Padding.Empty, Text = "Задать" };
+                ushort address = entry.address;
+                valueButton.Click += async delegate
+                {
+                    TextBox tbox = valueControl as TextBox;
+                    string valueLower = tbox.Text.ToLower();
+                    short value = 0;
+                    bool canWrite = false;
+                    if (App.IsDec(valueLower))
+                    {
+                        try { value = Convert.ToInt16(valueLower); canWrite = true; }
+                        catch (Exception err) { MessageBox.Show(err.Message); }
+                    }
+                    else if (App.IsHex(valueLower))
+                    {
+                        Console.WriteLine("Got hex value");
+                        for (int i = 0; i < valueLower.Length; i++)
+                        {
+                            if (valueLower[i] == 'x')
+                            {
+                                valueLower = valueLower.Remove(i, 1);
+                                break;
+                            }
+                        }
+                        try { value = Convert.ToInt16(valueLower, 16); canWrite = true; }
+                        catch (Exception err) { MessageBox.Show(err.Message); }
+                    }
+                    else if (App.IsBin(valueLower))
+                    {
+                        Console.WriteLine("Got bin value");
+                        for (int i = 0; i < valueLower.Length; i++)
+                        {
+                            if (valueLower[i] == 'b')
+                            {
+                                valueLower = valueLower.Remove(i, 1);
+                                break;
+                            }
+                        }
+                        try { value = Convert.ToInt16(valueLower, 2); canWrite = true; }
+                        catch (Exception err) { MessageBox.Show(err.Message); }
+                    }
+                    if (canWrite)
+                    {
+                        Console.WriteLine("Setting a holding register to " + tbox.Text);
+
+                        bool isPolling = Datasheet.isPolling;
+                        if (isPolling)
+                        {
+                            Datasheet.SetPolling(false);
+                            await Task.Delay(150); // wait for polling to finish
+                        }
+
+                        Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteRegister, Modbus.slaveID, address, (ushort)value);
+
+                        await Task.Delay(250).ContinueWith(_ =>
+                        {
+                            Datasheet.PollForEntry(this);
+                            if (isPolling)
+                                Datasheet.SetPolling(true);
+                        });
+                    }
+                };
+            }
+            else if (entry.registerType == RegisterType.Coil)
+            {
+                valueControl = new Label() { Height = 25, Width = 120, Margin = Padding.Empty, Text = "n/a" };
+                valueButton = new Button() { Height = 25, Width = 120, Margin = Padding.Empty, Text = "Переключить" };
+                valueButton.Click += async delegate
+                {
+                    Console.WriteLine("Toggling a coil");
+                    bool isPolling = Datasheet.isPolling;
+                    if (isPolling)
+                    {
+                        Datasheet.SetPolling(false);
+                        await Task.Delay(150); // wait for polling to finish
+                    }
+
+
+                    if (data is null) // entry wasn't polled, just set it to `true`
+                        Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteCoil, Modbus.slaveID, entry.address, 0xFF00);
+                    else
+                    {
+                        if (data[0] > 0x00)
+                            Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteCoil, Modbus.slaveID, entry.address, 0x0000);
+                        else Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteCoil, Modbus.slaveID, entry.address, 0xFF00);
+                    }
+
+                    await Task.Delay(250).ContinueWith(_ =>
+                    {
+                        Datasheet.PollForEntry(this);
+                        if (isPolling)
+                            Datasheet.SetPolling(true);
+                    });
+                };
+            }
+            else valueControl = new Label() { Height = 25, Width = 120, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty, Text = "n/a" };
+
+            valueControl.Parent = this;
+
+            if (valueButton != null)
+                valueButton.Parent = this;
         }
     }
 }
