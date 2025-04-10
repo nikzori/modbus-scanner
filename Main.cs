@@ -19,16 +19,16 @@ namespace Gidrolock_Modbus_Scanner
 {
     public partial class App : Form
     {
-        public static int[] BaudRate = new int[]
-        {
-           12, 24, 48, 96, 144, 192, 384, 576, 1152
-        };
+        public static int[] BaudRate = new int[] { 12, 24, 48, 96, 144, 192, 384, 576, 1152 };
         public static int[] DataBits = new int[] { 7, 8 };
-        Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+        //Socket socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 
         byte[] message = new byte[255];
         public bool isAwaitingResponse = false;
-        public short[] res = new short[12];
+        public static bool isPolling = false;
+        public ModbusResponseEventArgs latestMessage;
+
+
         SerialPort port = Modbus.port;
         public int expectedLength = 0;
         Datasheet datasheet;
@@ -42,8 +42,6 @@ namespace Gidrolock_Modbus_Scanner
 
         Dictionary<CheckEntry, List<Device>> juju = new Dictionary<CheckEntry, List<Device>>(); // dictionary for device identification
         string[] configs;
-
-        public byte[] latestMessage;
 
         DateTime dateTime;
         Stopwatch stopwatch = new Stopwatch();
@@ -146,8 +144,10 @@ namespace Gidrolock_Modbus_Scanner
         }
         #endregion
 
-        // Send a custom message
-        async Task<bool> ReadRegisterAsync(FunctionCode functionCode, ushort address, ushort length)
+        /// <summary>
+        /// Update port parameters according to values in UI.
+        /// </summary>
+        public void PortSetup()
         {
             if (CBox_Ports.Text == "")
                 MessageBox.Show("Необходимо выбрать COM порт.", "Ошибка", MessageBoxButtons.OK);
@@ -172,44 +172,13 @@ namespace Gidrolock_Modbus_Scanner
             message = new byte[255];
             port.Open();
 
-
-            /* - Reading from Registers - */
-            if (CBox_Function.SelectedIndex < 4)
-            {
-                try
-                {
-                    int attempts = 0;
-                    Modbus.ReadRegisters(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
-                    isAwaitingResponse = true;
-                    stopwatch.Restart();
-                    while (isAwaitingResponse)
-                    {
-                        if (stopwatch.ElapsedMilliseconds > 1000)
-                        {
-                            if (attempts > 2)
-                            {
-                                AddLog("Нет ответа от устройства.");
-                                return false;
-                            }
-                            AddLog("Истекло время ожидания ответа от устройства.");
-                            stopwatch.Restart();
-                            Modbus.ReadRegisters(port, (byte)UpDown_ModbusID.Value, functionCode, address, length);
-                            
-                        }
-                    }
-                    return true;
-                }
-                catch (Exception err)
-                {
-                    port.Close();
-                    MessageBox.Show(err.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-            return false;
+            Modbus.slaveID = (byte)UpDown_ModbusID.Value;
         }
 
         private async void ButtonConnect_Click(object sender, EventArgs e)
         {
+            if (isPolling)
+                return;
             Modbus.slaveID = (byte)UpDown_ModbusID.Value;
             progressBar1.Value = 0;
             if (path == String.Empty)
@@ -230,23 +199,7 @@ namespace Gidrolock_Modbus_Scanner
                     return;
             }
 
-            /* - Port Setup - */
-            if (port.IsOpen)
-                port.Close();
-
-            port.Handshake = Handshake.None;
-            port.PortName = CBox_Ports.Text;
-            port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex] * 100;
-            port.Parity = (Parity)CBox_Parity.SelectedIndex;
-            port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
-            port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
-
-            port.ReadTimeout = 3000;
-            port.WriteTimeout = 3000;
-            port.ReadBufferSize = 8192;
-
-            message = new byte[255];
-            port.Open();
+            PortSetup();
 
             /* - Checking - */
             if (selectedPath == SelectedPath.File)
@@ -274,9 +227,38 @@ namespace Gidrolock_Modbus_Scanner
                 {
                     Console.WriteLine("Connecting to the device;");
                     AddLog("Попытка подключиться к устройству " + device.name);
-                    if (await ReadRegisterAsync((FunctionCode)device.checkEntry.registerType, (byte)UpDown_ModbusID.Value, device.checkEntry.length))
-                    datasheet = new Datasheet((byte)UpDown_ModbusID.Value, CBox_BaudRate.SelectedIndex);
-                    datasheet.Show();
+                    bool isCorrect = false;
+                    if (Read((FunctionCode)device.checkEntry.registerType, device.checkEntry.address, device.checkEntry.length))
+                    {
+                        switch (device.checkEntry.dataType)
+                        {
+                            case "string":
+                                if (ByteArrayToUnicode(latestMessage.Data) == device.checkEntry.expectedValue)
+                                    isCorrect = true;
+                                break;
+                            case "uint16":
+                                if (ByteArrayToUint(latestMessage.Data) == Int32.Parse(device.checkEntry.expectedValue))
+                                    isCorrect = true;
+                                break;
+                            case "uint32":
+                                if (ByteArrayToUint(latestMessage.Data) == Int32.Parse(device.checkEntry.expectedValue))
+                                    isCorrect = true;
+                                break;
+
+
+                        }
+                        if (!isCorrect)
+                        {
+                            if (MessageBox.Show("Устройство ответило на запрос проверочного значения, но ответ не совпадает с ожидаемым значением. Продолжить?", "Неподходящий ответ устройства", MessageBoxButtons.OKCancel) == DialogResult.OK)
+                                isCorrect = true;
+                        }
+                    }
+                    if (isCorrect)
+                    {
+                        datasheet = new Datasheet((byte)UpDown_ModbusID.Value, CBox_BaudRate.SelectedIndex);
+                        datasheet.Show();
+                    }
+                    else MessageBox.Show("Нет ответа от устройства. Проверьте подключение к устройству.");
                 }
                 catch (Exception err) { MessageBox.Show(err.Message); }
             }
@@ -321,21 +303,13 @@ namespace Gidrolock_Modbus_Scanner
                         }
                     } // all configs are sorted out, we can poll for each checkEntry 
                 }
-                // setup event listener
-                ModbusResponseEventArgs message = null;
-                Modbus.ResponseReceived += (sndr, msg) => { message = msg; };
+
 
                 foreach (CheckEntry ce in juju.Keys)
                 {
-                    await ReadRegisterAsync((FunctionCode)ce.registerType, ce.address, ce.length);   // send read request to device,
-
-                    while (message is null) // wait for response to arrive
-                        Thread.Sleep(10);
-
-                    if (message.Status != ModbusStatus.Error) // error check
+                    if (Read((FunctionCode)ce.registerType, ce.address, ce.length))  // send read request to device; error check
                     {
-                        // get pure data
-                        byte[] data = message.Data;
+                        byte[] data = latestMessage.Data;
 
                         if (ce.dataType == "string")
                         {
@@ -360,7 +334,7 @@ namespace Gidrolock_Modbus_Scanner
                         else if (ce.dataType == "bool")
                         {
                             // why would you even do that lmao
-
+                            return;
                         }
                         else if (ce.dataType == "uint16" || ce.dataType == "uint32")
                         {
@@ -397,7 +371,6 @@ namespace Gidrolock_Modbus_Scanner
 
                     if (!(device is null)) // found the correct device, abort loop
                         break;
-                    message = null; // clear the array for the next item in case we haven't found the correct value
                 }
                 if (device is /* still */ null)
                 {
@@ -424,9 +397,231 @@ namespace Gidrolock_Modbus_Scanner
             CBox_Ports.Items.AddRange(SerialPort.GetPortNames());
         }
 
+        private async void Button_SendCommand_Click(object sender, EventArgs e)
+        {
+            if (isPolling)
+                return;
+
+            PortSetup();
+            try
+            {
+                int functionCode = CBox_Function.SelectedIndex + 1;
+                Console.WriteLine("Set fCode: " + functionCode);
+                short address;
+                ushort length = (ushort)UpDown_RegLength.Value;
+                byte[] _msg = new byte[8];
+                if (Int16.TryParse(TBox_RegAddress.Text, out address))
+                {
+                    if (functionCode <= 4)
+                    {
+                        await Task.Run(() => Read((FunctionCode)functionCode, (ushort)address, length));
+                    }
+                    else
+                    {
+                        string valueLower = TBox_RegValue.Text.ToLower();
+                        ushort value = 0x00_00;
+                        await Task.Run(() =>
+                        {
+                            switch ((FunctionCode)functionCode)
+                            {
+                                case (FunctionCode.WriteCoil):
+                                    Console.WriteLine("Trying to force single coil");
+                                    if (valueLower == "true" || valueLower == "1")
+                                        value = 0xFF_00;
+                                    else if (valueLower != "true" || valueLower != "1" || valueLower != "false" || valueLower != "0")
+                                    {
+                                        MessageBox.Show("Неподходящие значения для регистра типа Coil");
+                                        return;
+                                    }
+                                    Write((FunctionCode)functionCode, (ushort)address, value);
+                                    break;
+                                case (FunctionCode.WriteRegister):
+                                    bool canWrite = false;
+                                    if (IsDec(valueLower))
+                                    {
+                                        try { value = (ushort)Convert.ToInt16(valueLower); canWrite = true; }
+                                        catch (Exception err) { MessageBox.Show(err.Message); }
+                                    }
+                                    else if (IsHex(valueLower))
+                                    {
+                                        Console.WriteLine("Got hex value");
+                                        for (int i = 0; i < valueLower.Length; i++)
+                                        {
+                                            if (valueLower[i] == 'x')
+                                            {
+                                                valueLower = valueLower.Remove(i, 1);
+                                                break;
+                                            }
+                                        }
+                                        try { value = (ushort)Convert.ToInt16(valueLower, 16); canWrite = true; }
+                                        catch (Exception err) { MessageBox.Show(err.Message); }
+                                    }
+                                    else if (IsBin(valueLower))
+                                    {
+                                        Console.WriteLine("Got bin value");
+                                        for (int i = 0; i < valueLower.Length; i++)
+                                        {
+                                            if (valueLower[i] == 'b')
+                                            {
+                                                valueLower = valueLower.Remove(i, 1);
+                                                break;
+                                            }
+                                        }
+                                        try { value = (ushort)Convert.ToInt16(valueLower, 2); canWrite = true; }
+                                        catch (Exception err) { MessageBox.Show(err.Message); }
+                                    }
+                                    else if (valueLower == "true" || valueLower == "1")
+                                    {
+                                        value = 0x00_01;
+                                        canWrite = true;
+                                    }
+                                    else if (valueLower == "false" || valueLower == "0")
+                                    {
+                                        canWrite = true;
+                                    }
+                                    else
+                                    {
+                                        MessageBox.Show("Неподходящие значения для регистра типа Input Register");
+                                        break;
+                                    }
+
+                                    if (canWrite)
+                                        Write((FunctionCode)functionCode, (ushort)address, (ushort)value);
+                                    break;
+                                default:
+                                    MessageBox.Show("WIP");
+                                    break;
+                            }
+                        });
+                    }
+
+                }
+                string msg = Modbus.ByteArrayToString(_msg);
+            } catch (Exception err) { MessageBox.Show(err.Message, "Setting Register Error"); }
+        }
+
+        private void OnSelectedFunctionChanged(object sender, EventArgs e)
+        {
+            if (CBox_Function.SelectedIndex < 4)
+                TBox_RegValue.Enabled = false;
+            else TBox_RegValue.Enabled = true;
+            if (CBox_Function.SelectedIndex == 4 || CBox_Function.SelectedIndex == 5)
+                UpDown_RegLength.Enabled = false;
+            else UpDown_RegLength.Enabled = true;
+        }
+
+        private void LoadConfig(object sender, EventArgs e)
+        {
+            if (ofd.ShowDialog() == DialogResult.OK)
+            {
+                //Get the path of specified file
+                path = ofd.FileName;
+                Label_ConfPath.Invoke(new MethodInvoker(delegate { Label_ConfPath.Text = ofd.FileName; }));
+
+                selectedPath = SelectedPath.File;
+            }
+            UpdatePathLabel();
+        }
+
+        private void LoadFolder(object sender, EventArgs e)
+        {
+
+            fbd.RootFolder = Environment.SpecialFolder.MyComputer;
+            if (fbd.ShowDialog() == DialogResult.OK)
+            {
+                path = fbd.SelectedPath;
+                Label_ConfPath.Text = fbd.SelectedPath;
+                selectedPath = SelectedPath.Folder;
+            }
+            UpdatePathLabel();
+        }
+
+        bool Read(FunctionCode functionCode, ushort address, ushort length)
+        {
+            isPolling = true;
+            bool res = false;
+
+            try
+            {
+                latestMessage = null;
+                isAwaitingResponse = true;
+                int attempts = 0;
+
+                Modbus.Read(Modbus.slaveID, functionCode, address, length);
+                stopwatch.Restart();
+
+                while (isAwaitingResponse && latestMessage is null)
+                {
+                    if (stopwatch.ElapsedMilliseconds > port.ReadTimeout)
+                    {
+                        attempts++;
+                        if (attempts > 2)
+                        {
+                            AddLog("Устройство не отвечает. Проверьте соединение с устройством.");
+                            break;
+                        }
+                        AddLog("Истекло время ожидания ответа от устройства. Повторный запрос.");
+                        Modbus.Read(Modbus.slaveID, functionCode, address, length);
+                        stopwatch.Restart();
+                    }
+                }
+
+                if (latestMessage != null && latestMessage.Status != ModbusStatus.Error)
+                    res = true;
+            }
+            catch (Exception err)
+            {
+                port.Close();
+                MessageBox.Show(err.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            Console.WriteLine("Poll attempt finished");
+            isPolling = false;
+            return res;
+        }
+
+        bool Write(FunctionCode functionCode, ushort address, ushort value)
+        {
+            isPolling = true;
+            bool res = false;
+
+            try
+            {
+                latestMessage = null;
+                isAwaitingResponse = true;
+                int attempts = 0;
+                byte[] _msg;
+                Modbus.WriteSingle(functionCode, address, value, out _msg);
+                AddLog("Отправка сообщения: " + _msg);
+                stopwatch.Restart();
+
+                while (isAwaitingResponse && latestMessage is null)
+                {
+                    if (stopwatch.ElapsedMilliseconds > port.ReadTimeout)
+                    {
+                        attempts++;
+                        if (attempts > 2)
+                        {
+                            AddLog("Устройство не отвечает. Проверьте соединение с устройством.");
+                            break;
+                        }
+                        AddLog("Истекло время ожидания ответа от устройства. Повторный запрос.");
+                        Modbus.WriteSingle(functionCode, address, value);
+                        stopwatch.Restart();
+                    }
+                }
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show(err.Message, "Register Write Error");
+            }
+            isPolling = false;
+            return res;
+        }
+
         void OnResponseReceived(object sender, ModbusResponseEventArgs e)
         {
             isAwaitingResponse = false;
+            latestMessage = e;
             AddLog("Получен ответ: " + Modbus.ByteArrayToString(e.Message));
             switch (e.Status)
             {
@@ -502,155 +697,8 @@ namespace Gidrolock_Modbus_Scanner
             dateTime = DateTime.Now;
             TextBox_Log.Invoke((MethodInvoker)delegate { TextBox_Log.AppendText(Environment.NewLine + "[" + dateTime.Hour.ToString().PadLeft(2, '0') + ":" + dateTime.Minute.ToString().PadLeft(2, '0') + ":" + dateTime.Second.ToString().PadLeft(2, '0') + "] " + message); });
         }
-
-        private async void Button_SendCommand_Click(object sender, EventArgs e)
-        {
-            /* - Port Setup - */
-            if (port.IsOpen)
-                port.Close();
-
-            port.Handshake = Handshake.None;
-            port.PortName = CBox_Ports.Text;
-            port.BaudRate = BaudRate[CBox_BaudRate.SelectedIndex] * 100;
-            port.Parity = Parity.None;
-            port.DataBits = DataBits[CBox_DataBits.SelectedIndex];
-            port.StopBits = (StopBits)CBox_StopBits.SelectedIndex;
-
-            port.ReadTimeout = 3000;
-            port.WriteTimeout = 3000;
-            port.ReadBufferSize = 8192;
-
-            message = new byte[255];
-            port.Open();
-            Console.WriteLine(port.BaudRate);
-
-            int functionCode = CBox_Function.SelectedIndex + 1;
-            Console.WriteLine("Set fCode: " + functionCode);
-            short address;
-            ushort length = (ushort)UpDown_RegLength.Value;
-            byte[] _msg = new byte[8];
-            if (Int16.TryParse(TBox_RegAddress.Text, out address))
-            {
-                if (functionCode <= 4)
-                {
-                    Modbus.BuildReadMessage((byte)UpDown_ModbusID.Value, (byte)functionCode, (ushort)address, (ushort)length, ref _msg);
-                    await ReadRegisterAsync((FunctionCode)functionCode, (ushort)address, length);
-                }
-                else
-                {
-                    string valueLower = TBox_RegValue.Text.ToLower();
-                    switch ((FunctionCode)functionCode)
-                    {
-                        case (FunctionCode.WriteCoil):
-                            Console.WriteLine("Trying to force single coil");
-                            if (valueLower == "true" || valueLower == "1")
-                                Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0xFF_00, ref _msg);
-                            else if (valueLower == "false" || valueLower == "0")
-                                Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address, 0x00_00, ref _msg);
-                            else MessageBox.Show("Неподходящие значения для регистра типа Coil");
-                            break;
-                        case (FunctionCode.WriteRegister):
-                            short value = 0x00_00;
-                            bool canWrite = false;
-                            if (IsDec(valueLower))
-                            {
-                                try { value = Convert.ToInt16(valueLower); canWrite = true; }
-                                catch (Exception err) { MessageBox.Show(err.Message); }
-                            }
-                            else if (IsHex(valueLower))
-                            {
-                                Console.WriteLine("Got hex value");
-                                for (int i = 0; i < valueLower.Length; i++)
-                                {
-                                    if (valueLower[i] == 'x')
-                                    {
-                                        valueLower = valueLower.Remove(i, 1);
-                                        break;
-                                    }
-                                }
-                                try { value = Convert.ToInt16(valueLower, 16); canWrite = true; }
-                                catch (Exception err) { MessageBox.Show(err.Message); }
-                            }
-                            else if (IsBin(valueLower))
-                            {
-                                Console.WriteLine("Got bin value");
-                                for (int i = 0; i < valueLower.Length; i++)
-                                {
-                                    if (valueLower[i] == 'b')
-                                    {
-                                        valueLower = valueLower.Remove(i, 1);
-                                        break;
-                                    }
-                                }
-                                try { value = Convert.ToInt16(valueLower, 2); canWrite = true; }
-                                catch (Exception err) { MessageBox.Show(err.Message); }
-                            }
-                            else if (valueLower == "true" || valueLower == "1")
-                            {
-                                value = 0x00_01;
-                                canWrite = true;
-                            }
-                            else if (valueLower == "false" || valueLower == "0")
-                            {
-                                canWrite = true;
-                            }
-                            else
-                            {
-                                MessageBox.Show("Неподходящие значения для регистра типа Input Register");
-                                break;
-                            }
-
-                            if (canWrite)
-                                Modbus.WriteSingleAsync(port, (FunctionCode)functionCode, (byte)UpDown_ModbusID.Value, (ushort)address,
-                                        (ushort)value, ref _msg);
-                            break;
-                        default:
-                            MessageBox.Show("WIP");
-                            break;
-
-                    }
-                }
-            }
-            string msg = Modbus.ByteArrayToString(_msg);
-            AddLog("Отправка сообщения: " + msg);
-        }
-
-        private void OnSelectedFunctionChanged(object sender, EventArgs e)
-        {
-            if (CBox_Function.SelectedIndex < 4)
-                TBox_RegValue.Enabled = false;
-            else TBox_RegValue.Enabled = true;
-            if (CBox_Function.SelectedIndex == 4 || CBox_Function.SelectedIndex == 5)
-                UpDown_RegLength.Enabled = false;
-            else UpDown_RegLength.Enabled = true;
-        }
-
-        private void LoadConfig(object sender, EventArgs e)
-        {
-            if (ofd.ShowDialog() == DialogResult.OK)
-            {
-                //Get the path of specified file
-                path = ofd.FileName;
-                Label_ConfPath.Invoke(new MethodInvoker(delegate { Label_ConfPath.Text = ofd.FileName; }));
-
-                selectedPath = SelectedPath.File;
-            }
-            UpdatePathLabel();
-        }
-
-        private void LoadFolder(object sender, EventArgs e)
-        {
-
-            fbd.RootFolder = Environment.SpecialFolder.MyComputer;
-            if (fbd.ShowDialog() == DialogResult.OK)
-            {
-                path = fbd.SelectedPath;
-                Label_ConfPath.Text = fbd.SelectedPath;
-                selectedPath = SelectedPath.Folder;
-            }
-            UpdatePathLabel();
-        }
-
+        
+        #region Parsers
         public static bool IsHex(string str)
         {
             str = str.ToLower();
@@ -688,20 +736,32 @@ namespace Gidrolock_Modbus_Scanner
             }
             return true;
         }
+
+        //this assumes that every byte in the array is a single ASCII character
         public static string ByteArrayToUnicode(byte[] input)
         {
-            // stupid fucking WinForm textbox breaks from null symbols
-            // stupid fucking Encoding class does byte-by-byte conversion
-            List<char> result = new List<char>(input.Length / 2);
-            byte[] flip = input;
-            Array.Reverse(flip); // stupid fucking BitConverter is little-endian and spits out chinese nonsense otherwise
-            for (int i = 0; i < flip.Length; i += 2)
+            List<char> result = new List<char>();
+            for (int i = 0; i < input.Length; i++)
             {
-                result.Add(BitConverter.ToChar(flip, i));
+                if (input[i] == 0x00)
+                    continue;
+                else result.Add(Convert.ToChar(input[i]));
             }
-            result.Reverse();
             return new string(result.ToArray());
         }
+
+        public static int ByteArrayToUint(byte[] input)
+        {
+            if (input.Length > 4)
+                MessageBox.Show("Числовые значения больше 4 байт не поддерживаются");
+            int result = 0;
+            for (int i = input.Length - 1; i >= 0; i--)
+            {
+                result += input[i] << (i * 8);
+            }
+            return result;
+        }
+        #endregion
     }
 }
 

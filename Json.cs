@@ -14,7 +14,8 @@ namespace Gidrolock_Modbus_Scanner
         public string description;
         public List<Entry> entries;
         public CheckEntry checkEntry;
-        //TODO: add separate baudrate entry and ID address entry
+        public Entry idEntry;
+        public Entry speedEntry;
 
         public Device(string name, string description, CheckEntry checkEntry, List<Entry> entries)
         {

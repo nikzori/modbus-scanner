@@ -41,7 +41,7 @@ namespace Gidrolock_Modbus_Scanner
 
             Label_DeviceName.Text = device.name;
             Label_Description.Text = device.description;
-            
+
             cbBaudrate.Items.Add("1200");
             cbBaudrate.Items.Add("2400");
             cbBaudrate.Items.Add("4800");
@@ -130,19 +130,15 @@ namespace Gidrolock_Modbus_Scanner
                     activeEntryIndex++;
                     activeRowIndex++;
                     //Console.WriteLine("Next entry index: " + activeEntryIndex);
-                    Thread.Sleep(50);
                 }
-
-
             }
-
         }
 
         public static void PollForEntry(Entry entry)
         {
             int retryAttempts = 0;
             isAwaitingResponse = true;
-            Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+            Modbus.Read(slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
 
             stopwatch.Restart();
             while (isAwaitingResponse)
@@ -154,7 +150,7 @@ namespace Gidrolock_Modbus_Scanner
 
                     //Console.WriteLine("Response timed out.");
                     retryAttempts++;
-                    Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+                    Modbus.Read(slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
                     stopwatch.Restart();
                 }
             }
@@ -181,7 +177,7 @@ namespace Gidrolock_Modbus_Scanner
             Entry entry = entryRow.entry;
             int retryAttempts = 0;
             isAwaitingResponse = true;
-            Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+            Modbus.Read(slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
 
             stopwatch.Restart();
             while (isAwaitingResponse)
@@ -193,7 +189,7 @@ namespace Gidrolock_Modbus_Scanner
 
                     //Console.WriteLine("Response timed out.");
                     retryAttempts++;
-                    Modbus.ReadRegisters(port, slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+                    Modbus.Read(slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
                     stopwatch.Restart();
                 }
             }
@@ -301,7 +297,7 @@ namespace Gidrolock_Modbus_Scanner
                 isAwaitingResponse = true;
                 int retries = 0;
                 stopwatch.Restart();
-                Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteRegister, slaveID, 128, value);
+                Modbus.WriteSingle(FunctionCode.WriteRegister, 128, value);
 
                 while (isAwaitingResponse)
                 {
@@ -312,7 +308,7 @@ namespace Gidrolock_Modbus_Scanner
                         Console.WriteLine("Response for slave ID change timed out. isAwaitingResponse = " + isAwaitingResponse.ToString());
                         retries++;
                         stopwatch.Restart();
-                        Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteRegister, slaveID, 128, value);
+                        Modbus.WriteSingle(FunctionCode.WriteRegister, 128, value);
                     }
                 }
 
@@ -340,8 +336,8 @@ namespace Gidrolock_Modbus_Scanner
                 }
                 isAwaitingResponse = true;
                 int retries = 0;
-                
-                Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteRegister, slaveID, 110, brate);
+
+                Modbus.WriteSingle(FunctionCode.WriteRegister, 110, brate);
                 stopwatch.Restart();
 
                 while (isAwaitingResponse)
@@ -352,7 +348,7 @@ namespace Gidrolock_Modbus_Scanner
                             break;
                         Console.WriteLine("Response for baudrate change timed out.");
                         retries++;
-                        Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteRegister, slaveID, 110, brate);
+                        Modbus.WriteSingle(FunctionCode.WriteRegister, 110, brate);
                         stopwatch.Restart();
                     }
                 }
@@ -401,7 +397,9 @@ namespace Gidrolock_Modbus_Scanner
                     valueControl.Text = ((value[0] << 24) + (value[1] << 16) + (value[2] << 8) + value[3]).ToString();
                     break;
                 case "string":
-                    valueControl.Text = App.ByteArrayToUnicode(value);
+                    string _value = App.ByteArrayToUnicode(value);
+                    _value.Reverse(); // I have no idea why this is little-endian now. What the fuck is going on
+                    valueControl.Text = _value;
                     break;
                 case "bool":
                     valueControl.Text = value[0] > 0x00 ? "true" : "false";
@@ -494,7 +492,7 @@ namespace Gidrolock_Modbus_Scanner
                             await Task.Delay(150); // wait for polling to finish
                         }
 
-                        Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteRegister, Modbus.slaveID, address, (ushort)value);
+                        Modbus.WriteSingle(FunctionCode.WriteRegister, address, (ushort)value);
 
                         await Task.Delay(250).ContinueWith(_ =>
                         {
@@ -519,15 +517,11 @@ namespace Gidrolock_Modbus_Scanner
                         await Task.Delay(150); // wait for polling to finish
                     }
 
+                    ushort _value = 0xFF00; // default if entry wasn't polled or it's `false`
+                    if (data[0] > 0x00)
+                        _value = 0x0000;
 
-                    if (data is null) // entry wasn't polled, just set it to `true`
-                        Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteCoil, Modbus.slaveID, entry.address, 0xFF00);
-                    else
-                    {
-                        if (data[0] > 0x00)
-                            Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteCoil, Modbus.slaveID, entry.address, 0x0000);
-                        else Modbus.WriteSingleAsync(Modbus.port, FunctionCode.WriteCoil, Modbus.slaveID, entry.address, 0xFF00);
-                    }
+                    Modbus.WriteSingle(FunctionCode.WriteCoil, entry.address, _value);
 
                     await Task.Delay(250).ContinueWith(_ =>
                     {

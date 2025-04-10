@@ -1,15 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO.Ports;
+using System.Runtime.Remoting.Messaging;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Collections.Generic;
+using static System.Net.Mime.MediaTypeNames;
+using System.Diagnostics;
 
 namespace Gidrolock_Modbus_Scanner
 {
     public static class Modbus
     {
-        public static SerialPort port = new SerialPort();
         public static byte slaveID = 0x1E;
+        public static SerialPort port = new SerialPort();
+
         public static event EventHandler<ModbusResponseEventArgs> ResponseReceived = delegate { };
 
         public static void Init()
@@ -33,7 +39,7 @@ namespace Gidrolock_Modbus_Scanner
             GetCRC(message, ref CRC);
             message[message.Length - 2] = CRC[0];
             message[message.Length - 1] = CRC[1];
-            string msg = ByteArrayToString(message);
+            //string msg = ByteArrayToString(message);
             //Console.WriteLine("Message: " + msg);
             return message;
         }
@@ -60,7 +66,7 @@ namespace Gidrolock_Modbus_Scanner
         #endregion
 
         #region Read Functions
-        public static bool ReadRegisters(SerialPort port, byte slaveID, FunctionCode functionCode, ushort address, ushort length)
+        public static bool Read(byte slaveID, FunctionCode functionCode, ushort address, ushort length)
         {
             //Ensure port is open:
             if (port.IsOpen)
@@ -74,13 +80,14 @@ namespace Gidrolock_Modbus_Scanner
 
                 //Build outgoing modbus message:
                 BuildReadMessage(slaveID, (byte)functionCode, address, length, ref message);
-                Console.WriteLine("Outgoing message: " + ByteArrayToString(message));
+
                 if (message.Length > 1)
                 {
                     //Send modbus message to Serial Port:
                     try
                     {
                         port.Write(message, 0, message.Length);
+                        Console.WriteLine("Message sent");
                         return true;
                     }
                     catch (Exception err)
@@ -102,7 +109,7 @@ namespace Gidrolock_Modbus_Scanner
         #endregion
 
         #region Write Single Coil/Register
-        public static bool WriteSingleAsync(SerialPort port, FunctionCode functionCode, byte slaveID, ushort address, ushort value)
+        public static bool WriteSingle(FunctionCode functionCode, ushort address, ushort value)
         {
             //Ensure port is open:
             if (!port.IsOpen)
@@ -142,7 +149,8 @@ namespace Gidrolock_Modbus_Scanner
             }
 
         }
-        public static bool WriteSingleAsync(SerialPort port, FunctionCode functionCode, byte slaveID, ushort address, ushort value, ref byte[] msg)
+
+        public static bool WriteSingle(FunctionCode functionCode, ushort address, ushort value, out byte[] msg)
         {
             //Ensure port is open:
             if (!port.IsOpen)
@@ -154,6 +162,7 @@ namespace Gidrolock_Modbus_Scanner
                 catch (Exception err)
                 {
                     MessageBox.Show(err.Message);
+                    msg = null;
                     return false;
                 }
             }
@@ -208,9 +217,6 @@ namespace Gidrolock_Modbus_Scanner
 
         public static string ByteArrayToString(byte[] bytes, bool cleanEmpty = true)
         {
-            if (bytes is null || bytes.Length == 0)
-                return "";
-
             byte[] res;
 
             if (cleanEmpty)
@@ -248,12 +254,8 @@ namespace Gidrolock_Modbus_Scanner
         }
 
 
-        /// <summary>
-        /// Рассчет CRC для 
-        /// </summary>
-        /// <param name="message">Сообщение с двумя байтами под CRC</param>
-        /// <param name="CRC"></param>
-        static void GetCRC(byte[] message, ref byte[] CRC)
+        #region CRC Computation
+        public static void GetCRC(byte[] message, ref byte[] CRC)
         {
             //Function expects a modbus message of any length as well as a 2 byte CRC array in which to 
             //return the CRC values:
@@ -278,90 +280,105 @@ namespace Gidrolock_Modbus_Scanner
             CRC[1] = CRCHigh = (byte)((CRCFull >> 8) & 0xFF);
             CRC[0] = CRCLow = (byte)(CRCFull & 0xFF);
         }
-
-
-        /// <summary>
-        /// Подсчет фактического CRC сообщения и сравнение с CRC в самом сообщении.
-        /// </summary>
-        /// <param name="message">Сообщение с CRC.</param>
-        /// <returns></returns>
-        public static bool CheckCRC(byte[] message)                     // Проверка пакета на контрольную сумму
+        public static bool CheckResponse(byte[] response)                     // Проверка пакета на контрольную сумму
         {
             //Perform a basic CRC check:
             byte[] CRC = new byte[2];
             try
             {
-                CRC[0] = message[message.Length - 2];
-                CRC[1] = message[message.Length - 1];
+                CRC[0] = response[response.Length - 2];
+                CRC[1] = response[response.Length - 1];
             }
             catch (Exception err)
             {
-                Console.WriteLine("CheckCRC() error: " + err.ToString());
                 return false;
             }
-            GetCRC(message, ref CRC);
+            GetCRC(response, ref CRC);
 
-            if (CRC[0] == message[message.Length - 2] && CRC[1] == message[message.Length - 1])
+            if (CRC[0] == response[response.Length - 2] && CRC[1] == response[response.Length - 1])
                 return true;
             else
                 return false;
         }
+        #endregion
+
 
         static Stopwatch stopwatch = new Stopwatch();
+
         static byte[] buffer = new byte[255];
         static int offset = 0;
         static int count = 0;
+        static ModbusStatus responseStatus;
+        static bool bytecountFound = false;
+        static int expectedBytes = 0;
         static void PortDataReceived(object sender, EventArgs e)
         {
             //reset values on every event call;
             buffer = new byte[255];
             offset = 0;
+            bytecountFound = false;
+            expectedBytes = 0;
+
             try
             {
                 stopwatch.Restart();
-                while (stopwatch.ElapsedMilliseconds < 20)
+                while (stopwatch.ElapsedMilliseconds < port.ReadTimeout)
                 {
+                    if (bytecountFound && offset >= expectedBytes)
+                        break;
                     if (port.BytesToRead > 0)
                     {
                         stopwatch.Restart();
                         count = port.BytesToRead;
-                        port.Read(buffer, offset, port.BytesToRead);
+                        port.Read(buffer, offset, count);
                         offset += count;
-                    }
-                }
-                // assume that the message ended
-                
-                List<byte> message = new List<byte>();
-                for (int i = 0; i < offset; i++)
-                {
-                    message.Add(buffer[i]);
-                }
-                if (message.Count == 0)
-                    return;
+                        if (offset >= 1)
+                        {
+                            if (buffer[1] < 0x05)
+                                responseStatus = ModbusStatus.ReadSuccess;
+                            else if (buffer[1] < 0x10)
+                            {
+                                responseStatus = ModbusStatus.WriteSuccess;
+                                expectedBytes = 8;
+                                bytecountFound = true;
+                            }
+                            else
+                            {
+                                responseStatus = ModbusStatus.Error;
+                                expectedBytes = 5;
+                                bytecountFound = true;
+                            }
+                        }
 
-                Console.WriteLine("Incoming message: " + ByteArrayToString(message.ToArray(), false));
-                
-                if (!CheckCRC(message.ToArray()))
-                    Console.WriteLine("Bad CRC or not a modbus message!"); 
-                
-                if (message[1] <= 0x04) // read functions
-                {
-                    //Console.WriteLine("It's a read message");
-                    ResponseReceived.Invoke(null, new ModbusResponseEventArgs(message.ToArray(), ModbusStatus.ReadSuccess));
-                }
-                else
-                {
-                    if (message[1] <= 0x10) // write functions
-                    {
-                        //Console.WriteLine("It's a write message");
-                        ResponseReceived.Invoke(null, new ModbusResponseEventArgs(message.ToArray(), ModbusStatus.WriteSuccess));
-                    }
-                    else // error codes
-                    {
-                        //Console.WriteLine("It's an error");
-                        ResponseReceived.Invoke(null, new ModbusResponseEventArgs(message.ToArray(), ModbusStatus.Error));
+                        if (responseStatus == ModbusStatus.ReadSuccess && !bytecountFound && offset >= 2)
+                        {
+                            expectedBytes = buffer[2] + 5;
+                            Console.WriteLine("Found data byte count: " + expectedBytes);
+                            bytecountFound = true;
+                        }
+                        if (bytecountFound && offset >= expectedBytes) // reached end of message
+                        {
+                            Console.WriteLine("Reached end of message");
+                            break;
+                        }
+                        stopwatch.Restart();
                     }
                 }
+                // Console.WriteLine("Buffer: " + ByteArrayToString(buffer, false));
+                // assume that the message ended
+                Console.WriteLine("Message reception ended");
+                byte[] message = new byte[expectedBytes];
+                for (int i = 0; i < expectedBytes; i++)
+                    message[i] = buffer[i];
+
+                Console.WriteLine("Incoming message: " + ByteArrayToString(message, false));
+
+                if (!CheckResponse(message))
+                    Console.WriteLine("Bad CRC or not a modbus message!");
+
+                ResponseReceived.Invoke(null, new ModbusResponseEventArgs(message, responseStatus));
+
+
             }
             catch (Exception err)
             {
@@ -370,8 +387,8 @@ namespace Gidrolock_Modbus_Scanner
 
             port.DiscardInBuffer();
         }
-    }
 
+    }
     public class ModbusResponseEventArgs : EventArgs
     {
         public byte[] Message { get; set; }
@@ -385,8 +402,13 @@ namespace Gidrolock_Modbus_Scanner
             {
                 int dataLength = message[2];
                 Data = new byte[dataLength];
-                for (int i = 0; i < dataLength; i++) { Data[i] = message[i + 3]; }
+                for (int i = 0; i < dataLength; i++)
+                {
+                    Data[i] = message[i + 3];
+                }
+                //Console.WriteLine("Read data: " + Modbus.ByteArrayToString(Data, false));
             }
+            else Data = new byte[1] { 0x0F };
         }
     }
 
