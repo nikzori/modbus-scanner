@@ -14,6 +14,7 @@ namespace Gidrolock_Modbus_Scanner
     public static class Modbus
     {
         public static byte slaveID = 0x1E;
+        public static int baudrate = 9600;
         public static SerialPort port = new SerialPort();
 
         public static event EventHandler<ModbusResponseEventArgs> ResponseReceived = delegate { };
@@ -80,7 +81,7 @@ namespace Gidrolock_Modbus_Scanner
 
                 //Build outgoing modbus message:
                 BuildReadMessage(slaveID, (byte)functionCode, address, length, ref message);
-
+                Console.WriteLine("Outgoing message: " + ByteArrayToString(message));
                 if (message.Length > 1)
                 {
                     //Send modbus message to Serial Port:
@@ -353,20 +354,20 @@ namespace Gidrolock_Modbus_Scanner
                         if (responseStatus == ModbusStatus.ReadSuccess && !bytecountFound && offset >= 2)
                         {
                             expectedBytes = buffer[2] + 5;
-                            Console.WriteLine("Found data byte count: " + expectedBytes);
+                            //Console.WriteLine("Found data byte count: " + expectedBytes);
                             bytecountFound = true;
                         }
                         if (bytecountFound && offset >= expectedBytes) // reached end of message
                         {
-                            Console.WriteLine("Reached end of message");
+                            //Console.WriteLine("Reached end of message");
                             break;
                         }
                         stopwatch.Restart();
                     }
                 }
-                // Console.WriteLine("Buffer: " + ByteArrayToString(buffer, false));
+                //Console.WriteLine("Buffer: " + ByteArrayToString(buffer, false));
                 // assume that the message ended
-                Console.WriteLine("Message reception ended");
+                //Console.WriteLine("Message reception ended");
                 byte[] message = new byte[expectedBytes];
                 for (int i = 0; i < expectedBytes; i++)
                     message[i] = buffer[i];

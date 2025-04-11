@@ -22,7 +22,6 @@ namespace Gidrolock_Modbus_Scanner
 
         int timeout = 3000;
         static int dbc; //data byte count
-        static byte slaveID;
         Device device = App.device;
         static List<Entry> entries;
         static List<EntryRow> entryRows;
@@ -31,10 +30,9 @@ namespace Gidrolock_Modbus_Scanner
         static SerialPort port = Modbus.port;
         static Stopwatch stopwatch = new Stopwatch();
         bool closed = false;
-        public Datasheet(byte slaveID, int baudrateIndex)
+        public Datasheet(int baudrateIndex)
         {
             Modbus.ResponseReceived += PublishResponse;
-            Datasheet.slaveID = slaveID;
             entries = device.entries;
             Console.WriteLine("Initializing datasheet");
             InitializeComponent();
@@ -53,13 +51,14 @@ namespace Gidrolock_Modbus_Scanner
             cbBaudrate.Items.Add("115200");
             cbBaudrate.SelectedIndex = baudrateIndex;
 
-            udSlaveId.Value = slaveID;
+            udSlaveId.Value = Modbus.slaveID;
 
             int rowCount = 0;
 
             entryRows = new List<EntryRow>();
             foreach (Entry e in entries)
             {
+                Console.WriteLine("Initializing entry " + e.name);
                 if (e.length > 1)
                 {
                     if ((e.length == 2 && e.dataType == "uint32") || e.dataType == "string") // this is a single multi-register entry
@@ -107,29 +106,35 @@ namespace Gidrolock_Modbus_Scanner
                 if (isPolling)
                 {
                     //Console.WriteLine("Poll tick");
-                    if (activeEntryIndex >= device.entries.Count || activeRowIndex >= entryRows.Count)
+                    if (activeEntryIndex >= device.entries.Count)
                     {
-                        //Console.WriteLine("Resetting indexes");
+                        Console.WriteLine("activeEntryIndex is too big, resetting");
                         activeEntryIndex = 0;
                         activeRowIndex = 0;
                     }
-                    //Console.WriteLine("Polling for entry index " + activeEntryIndex + "; row index " + activeRowIndex);
+                    if (activeRowIndex >= entryRows.Count)
+                    {
+                        Console.WriteLine("activeRowIndex is too big, resetting");
+                        activeEntryIndex = 0;
+                        activeRowIndex = 0;
+                    }
+                    Console.WriteLine("Polling for entry index " + activeEntryIndex + "; row index " + activeRowIndex);
                     if (entryRows[activeRowIndex].checkbox is CheckBox)
                     {
-                        CheckBox chbx = entryRows[activeRowIndex].checkbox as CheckBox;
-                        if (chbx.Checked)
+                        
+                        if ((entryRows[activeRowIndex].checkbox as CheckBox).Checked)
                         {
-                            //Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
+                            Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
                             Entry entry = entries[activeEntryIndex];
                             PollForEntry(entry);
                             if (entries[activeEntryIndex].readOnce)
-                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { chbx.Checked = false; }));
+                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { (entryRows[activeRowIndex].checkbox as CheckBox).Checked = false; }));
                         }
                     }
 
                     activeEntryIndex++;
                     activeRowIndex++;
-                    //Console.WriteLine("Next entry index: " + activeEntryIndex);
+                    Console.WriteLine("Next entry index: " + activeEntryIndex + "; next row index: " + activeRowIndex);
                 }
             }
         }
@@ -138,19 +143,19 @@ namespace Gidrolock_Modbus_Scanner
         {
             int retryAttempts = 0;
             isAwaitingResponse = true;
-            Modbus.Read(slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+            Modbus.Read(Modbus.slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
 
             stopwatch.Restart();
             while (isAwaitingResponse)
             {
                 if (stopwatch.ElapsedMilliseconds > 1000)
                 {
-                    if (retryAttempts > 3)
+                    if (retryAttempts > 2)
                         break;
 
                     //Console.WriteLine("Response timed out.");
                     retryAttempts++;
-                    Modbus.Read(slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+                    Modbus.Read(Modbus.slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
                     stopwatch.Restart();
                 }
             }
@@ -177,19 +182,19 @@ namespace Gidrolock_Modbus_Scanner
             Entry entry = entryRow.entry;
             int retryAttempts = 0;
             isAwaitingResponse = true;
-            Modbus.Read(slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+            Modbus.Read(Modbus.slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
 
             stopwatch.Restart();
             while (isAwaitingResponse)
             {
                 if (stopwatch.ElapsedMilliseconds > 1000)
                 {
-                    if (retryAttempts > 3)
+                    if (retryAttempts > 2)
                         break;
 
                     //Console.WriteLine("Response timed out.");
                     retryAttempts++;
-                    Modbus.Read(slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
+                    Modbus.Read(Modbus.slaveID, (FunctionCode)entry.registerType, entry.address, entry.length);
                     stopwatch.Restart();
                 }
             }
@@ -208,6 +213,8 @@ namespace Gidrolock_Modbus_Scanner
 
         static void ParseSingle()
         {
+            if (latestMessage.Status == ModbusStatus.Error)
+                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].valueControl.Text = "Ошибка"; }));
             entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(latestMessage.Data); }));
         }
         static void ParseGroup()
@@ -227,8 +234,11 @@ namespace Gidrolock_Modbus_Scanner
 
                     for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
                     {
-                        entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(new byte[] { values[i] }); }));
-                        activeRowIndex++;
+                        if (latestMessage.Status == ModbusStatus.Error)
+                            entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].valueControl.Text = "Ошибка"; }));
+                        else entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(new byte[] { values[i] }); }));
+                        if (entries[activeEntryIndex].labels.Count - i != 1)
+                            activeRowIndex++;
                     }
 
                     break;
@@ -243,12 +253,15 @@ namespace Gidrolock_Modbus_Scanner
                             pair[1] = latestMessage.Data[i + 1];
                             bytes.Add(pair);
                         }
-                        //Console.WriteLine("ushort values count: " + values.Count);
-                        //Console.WriteLine("entity labels count: " + entries[activeEntryIndex].labels.Count);
+                        Console.WriteLine("ushort values count: " + bytes.Count);
+                        Console.WriteLine("entity labels count: " + entries[activeEntryIndex].labels.Count);
                         for (int i = 0; i < entries[activeEntryIndex].labels.Count; i++)
                         {
-                            entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(bytes[i]); }));
-                            activeRowIndex++;
+                            if (latestMessage.Status == ModbusStatus.Error)
+                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].valueControl.Text = "Ошибка"; }));
+                            else entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { entryRows[activeRowIndex].SetValue(bytes[i]); }));
+                            if (entries[activeEntryIndex].labels.Count - i != 1)
+                                activeRowIndex++;
                         }
                     }
                     catch (Exception err)
@@ -297,7 +310,7 @@ namespace Gidrolock_Modbus_Scanner
                 isAwaitingResponse = true;
                 int retries = 0;
                 stopwatch.Restart();
-                Modbus.WriteSingle(FunctionCode.WriteRegister, 128, value);
+                Modbus.WriteSingle(FunctionCode.WriteRegister, device.idEntry.address, value);
 
                 while (isAwaitingResponse)
                 {
@@ -308,7 +321,7 @@ namespace Gidrolock_Modbus_Scanner
                         Console.WriteLine("Response for slave ID change timed out. isAwaitingResponse = " + isAwaitingResponse.ToString());
                         retries++;
                         stopwatch.Restart();
-                        Modbus.WriteSingle(FunctionCode.WriteRegister, 128, value);
+                        Modbus.WriteSingle(FunctionCode.WriteRegister, device.idEntry.address, value);
                     }
                 }
 
@@ -318,7 +331,7 @@ namespace Gidrolock_Modbus_Scanner
                     return;
                 }
 
-                slaveID = (byte)udSlaveId.Value;
+                Modbus.slaveID = (byte)udSlaveId.Value;
                 isPolling = _isPolling;
             });
         }
@@ -337,7 +350,7 @@ namespace Gidrolock_Modbus_Scanner
                 isAwaitingResponse = true;
                 int retries = 0;
 
-                Modbus.WriteSingle(FunctionCode.WriteRegister, 110, brate);
+                Modbus.WriteSingle(FunctionCode.WriteRegister, device.speedEntry.address, brate);
                 stopwatch.Restart();
 
                 while (isAwaitingResponse)
@@ -348,7 +361,7 @@ namespace Gidrolock_Modbus_Scanner
                             break;
                         Console.WriteLine("Response for baudrate change timed out.");
                         retries++;
-                        Modbus.WriteSingle(FunctionCode.WriteRegister, 110, brate);
+                        Modbus.WriteSingle(FunctionCode.WriteRegister, device.speedEntry.address, brate);
                         stopwatch.Restart();
                     }
                 }
@@ -382,27 +395,36 @@ namespace Gidrolock_Modbus_Scanner
 
         public void SetValue(byte[] value)
         {
-            Array.Reverse(value); // for some reason the incoming array gets reversed *specifically* when it gets here
-                                  //Console.WriteLine("byte array for entry: " + Modbus.ByteArrayToString(value, false));
+            //Console.WriteLine("byte array for entry: " + Modbus.ByteArrayToString(value, false));
             data = value;
 
             if (valueControl is null)
                 return;
+            
             switch (dataType)
             {
                 case "uint16":
-                    valueControl.Text = ((value[0] << 8) + value[1]).ToString();
+                    var _value = (value[0] << 8) + value[1];
+                    if (entry.valueParse is null)
+                        valueControl.Text = _value.ToString();
+                    else try { valueControl.Text = entry.valueParse[_value.ToString()]; } catch { valueControl.Text = _value.ToString(); }
                     break;
                 case "uint32":
-                    valueControl.Text = ((value[0] << 24) + (value[1] << 16) + (value[2] << 8) + value[3]).ToString();
+                    _value = ((value[0] << 24) + (value[1] << 16) + (value[2] << 8) + value[3]);
+                    if (entry.valueParse is null)
+                        valueControl.Text = _value.ToString();
+                    else try { valueControl.Text = entry.valueParse[_value.ToString()]; } catch { valueControl.Text = _value.ToString(); }
                     break;
                 case "string":
-                    string _value = App.ByteArrayToUnicode(value);
-                    _value.Reverse(); // I have no idea why this is little-endian now. What the fuck is going on
-                    valueControl.Text = _value;
+                    string _str = App.ByteArrayToUnicode(value);
+                    if (entry.valueParse is null)
+                        valueControl.Text = App.ByteArrayToUnicode(value);
+                    else try { valueControl.Text = entry.valueParse[_str]; } catch { valueControl.Text = _str; }
                     break;
                 case "bool":
-                    valueControl.Text = value[0] > 0x00 ? "true" : "false";
+                    if (entry.valueParse is null)
+                        valueControl.Text = value[0] > 0x00 ? "true" : "false";
+                    else try { valueControl.Text = entry.valueParse[value[0].ToString()]; } catch { valueControl.Text = value[0] > 0x00 ? "true" : "false"; }
                     break;
                 default:
                     MessageBox.Show("Неизвестный или неправильный тип данных в конфигурации для адреса " + addressLabel.Text);
@@ -424,7 +446,10 @@ namespace Gidrolock_Modbus_Scanner
             else this.BackColor = Color.LightGray;
 
             if (hasCheckbox)
+            {
                 checkbox = new CheckBox() { Width = 25, Height = 20, Margin = Padding.Empty };
+                (checkbox as CheckBox).Checked = true;
+            }
             else checkbox = new Label() { Width = 25, Height = 20, Margin = Padding.Empty };
             checkbox.Parent = this;
 

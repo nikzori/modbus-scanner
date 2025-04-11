@@ -180,6 +180,7 @@ namespace Gidrolock_Modbus_Scanner
             if (isPolling)
                 return;
             Modbus.slaveID = (byte)UpDown_ModbusID.Value;
+            device = null;
             progressBar1.Value = 0;
             if (path == String.Empty)
             {
@@ -200,195 +201,188 @@ namespace Gidrolock_Modbus_Scanner
             }
 
             PortSetup();
-
-            /* - Checking - */
-            if (selectedPath == SelectedPath.File)
+            await Task.Run(() =>
             {
-                var fileContent = string.Empty;
-                var filePath = string.Empty;
-                //Read the contents of the file into a stream
-                var fileStream = ofd.OpenFile();
-
-                using (StreamReader reader = new StreamReader(fileStream))
+                if (selectedPath == SelectedPath.File)
                 {
-                    fileContent = reader.ReadToEnd();
-                }
-                progressBar1.Value = 100;
-
-                try
-                {
-                    Console.WriteLine("Deserializing `.json`;");
-                    device = JsonConvert.DeserializeObject<Device>(fileContent);
-                    Label_ConfigTip.Text = device.name;
-                }
-                catch (Exception err) { MessageBox.Show(err.Message); }
-
-                try
-                {
-                    Console.WriteLine("Connecting to the device;");
-                    AddLog("Попытка подключиться к устройству " + device.name);
-                    bool isCorrect = false;
-                    if (Read((FunctionCode)device.checkEntry.registerType, device.checkEntry.address, device.checkEntry.length))
-                    {
-                        switch (device.checkEntry.dataType)
-                        {
-                            case "string":
-                                if (ByteArrayToUnicode(latestMessage.Data) == device.checkEntry.expectedValue)
-                                    isCorrect = true;
-                                break;
-                            case "uint16":
-                                if (ByteArrayToUint(latestMessage.Data) == Int32.Parse(device.checkEntry.expectedValue))
-                                    isCorrect = true;
-                                break;
-                            case "uint32":
-                                if (ByteArrayToUint(latestMessage.Data) == Int32.Parse(device.checkEntry.expectedValue))
-                                    isCorrect = true;
-                                break;
-
-
-                        }
-                        if (!isCorrect)
-                        {
-                            if (MessageBox.Show("Устройство ответило на запрос проверочного значения, но ответ не совпадает с ожидаемым значением. Продолжить?", "Неподходящий ответ устройства", MessageBoxButtons.OKCancel) == DialogResult.OK)
-                                isCorrect = true;
-                        }
-                    }
-                    if (isCorrect)
-                    {
-                        datasheet = new Datasheet((byte)UpDown_ModbusID.Value, CBox_BaudRate.SelectedIndex);
-                        datasheet.Show();
-                    }
-                    else MessageBox.Show("Нет ответа от устройства. Проверьте подключение к устройству.");
-                }
-                catch (Exception err) { MessageBox.Show(err.Message); }
-            }
-            else
-            {
-                string[] _configs = Directory.GetFiles(path, "*.json");
-                if (configs != _configs)
-                {
-                    // something changed in the config folder, or we haven't gone through configs, 
-                    // remake the dictionary
-                    configs = _configs;
-                    juju = new Dictionary<CheckEntry, List<Device>>();
-
                     var fileContent = string.Empty;
-                    FileStream fileStream;
-                    Device _device;
+                    var filePath = string.Empty;
+                    //Read the contents of the file into a stream
+                    var fileStream = ofd.OpenFile();
 
-                    foreach (string path in configs)
+                    using (StreamReader reader = new StreamReader(fileStream))
                     {
-                        fileStream = File.OpenRead(path);
-                        using (StreamReader reader = new StreamReader(fileStream))
-                            fileContent = reader.ReadToEnd();
-                        // get device object from .json
-                        _device = JsonConvert.DeserializeObject<Device>(fileContent);
+                        fileContent = reader.ReadToEnd();
+                    }
 
-                        // compare device object to key of each dictionary;
-                        // add to that dictionary if device's check entry registers match the key
-                        bool matched = false;
-                        foreach (CheckEntry ce in juju.Keys)
+                    try
+                    {
+                        Console.WriteLine("Deserializing `.json`;");
+                        device = JsonConvert.DeserializeObject<Device>(fileContent);
+                        Label_ConfigTip.Invoke(new MethodInvoker(delegate { Label_ConfigTip.Text = device.name; }));
+                    }
+                    catch (Exception err) { MessageBox.Show(err.Message); }
+                    progressBar1.Invoke(new MethodInvoker(delegate { progressBar1.Value = 100; }));
+                    try
+                    {
+                        Console.WriteLine("Connecting to the device;");
+                        AddLog("Попытка подключиться к устройству " + device.name);
+                        bool isCorrect = false;
+                        if (Read((FunctionCode)device.checkEntry.registerType, device.checkEntry.address, device.checkEntry.length))
                         {
-                            if (_device.checkEntry.address == ce.address && _device.checkEntry.length == ce.length && _device.checkEntry.dataType == ce.dataType)
+                            switch (device.checkEntry.dataType)
                             {
-                                juju[ce].Add(_device);
-                                matched = true;
-                                break;
+                                case "string":
+                                    if (ByteArrayToUnicode(latestMessage.Data) == device.checkEntry.expectedValue)
+                                        isCorrect = true;
+                                    break;
+                                case "uint16":
+                                    if (ByteArrayToUint(latestMessage.Data) == Int32.Parse(device.checkEntry.expectedValue))
+                                        isCorrect = true;
+                                    break;
+                                case "uint32":
+                                    if (ByteArrayToUint(latestMessage.Data) == Int32.Parse(device.checkEntry.expectedValue))
+                                        isCorrect = true;
+                                    break;
+                            }
+                            if (!isCorrect)
+                            {
+                                if (MessageBox.Show("Устройство ответило на запрос проверочного значения, но ответ не совпадает с ожидаемым значением. Продолжить?", "Неподходящий ответ устройства", MessageBoxButtons.OKCancel) == DialogResult.Cancel)
+                                    return;
                             }
                         }
-                        if (!matched)
-                        {
-                            juju.Add(_device.checkEntry, new List<Device>());
-                            juju[_device.checkEntry].Add(_device);
-                        }
-                    } // all configs are sorted out, we can poll for each checkEntry 
+                    }
+                    catch (Exception err) { MessageBox.Show(err.Message); }
                 }
-
-
-                foreach (CheckEntry ce in juju.Keys)
+                else
                 {
-                    if (Read((FunctionCode)ce.registerType, ce.address, ce.length))  // send read request to device; error check
+                    string[] _configs = Directory.GetFiles(path, "*.json");
+                    if (configs != _configs)
                     {
-                        byte[] data = latestMessage.Data;
+                        // something changed in the config folder, or we haven't gone through configs, 
+                        // remake the dictionary
+                        configs = _configs;
+                        juju = new Dictionary<CheckEntry, List<Device>>();
 
-                        if (ce.dataType == "string")
+                        var fileContent = string.Empty;
+                        FileStream fileStream;
+                        Device _device;
+
+                        foreach (string path in configs)
                         {
+                            fileStream = File.OpenRead(path);
+                            using (StreamReader reader = new StreamReader(fileStream))
+                                fileContent = reader.ReadToEnd();
+                            // get device object from .json
+                            _device = JsonConvert.DeserializeObject<Device>(fileContent);
 
-                            List<byte> bytes = new List<byte>();
-                            for (int i = 0; i < data.Length; i++)
+                            // compare device object to key of each dictionary;
+                            // add to that dictionary if device's check entry registers match the key
+                            bool matched = false;
+                            foreach (CheckEntry ce in juju.Keys)
                             {
-                                if (data[i] != 0)       // clean empty bytes from 16-bit registers
-                                    bytes.Add(data[i]);
-                            }
-                            string value = Encoding.UTF8.GetString(bytes.ToArray());
-                            foreach (Device dev in juju[ce])
-                            {
-                                if (dev.checkEntry.expectedValue == value)
+                                if (_device.checkEntry.address == ce.address && _device.checkEntry.length == ce.length && _device.checkEntry.dataType == ce.dataType)
                                 {
-                                    Console.WriteLine("It's a match!");
-                                    device = dev;
+                                    juju[ce].Add(_device);
+                                    matched = true;
                                     break;
                                 }
                             }
-                        }
-                        else if (ce.dataType == "bool")
-                        {
-                            // why would you even do that lmao
-                            return;
-                        }
-                        else if (ce.dataType == "uint16" || ce.dataType == "uint32")
-                        {
-                            byte[] _data = data;
-                            Array.Reverse(_data);
-                            if (ce.dataType == "uint16")
+                            if (!matched)
                             {
-                                ushort value = BitConverter.ToUInt16(_data, 0);
-                                foreach (Device dev in juju[ce])
-                                {
-                                    short expValue;
-                                    if (Int16.TryParse(dev.checkEntry.expectedValue, out expValue) && expValue == value)
-                                    {
-                                        device = dev;
-                                        break;
-                                    }
-                                }
+                                juju.Add(_device.checkEntry, new List<Device>());
+                                juju[_device.checkEntry].Add(_device);
                             }
-                            else
-                            {
-                                int value = BitConverter.ToInt32(_data, 0);
-                                foreach (Device dev in juju[ce])
-                                {
-                                    int expValue;
-                                    if (Int32.TryParse(dev.checkEntry.expectedValue, out expValue) && expValue == value)
-                                    {
-                                        device = dev;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                        } // all configs are sorted out, we can poll for each checkEntry 
                     }
 
-                    if (!(device is null)) // found the correct device, abort loop
-                        break;
-                }
-                if (device is /* still */ null)
-                {
-                    MessageBox.Show("Ни один из файлов конфигурации не подходит для устройства.");
-                    return;
-                }
 
+                    foreach (CheckEntry ce in juju.Keys)
+                    {
+                        if (Read((FunctionCode)ce.registerType, ce.address, ce.length))  // send read request to device; error check
+                        {
+                            byte[] data = latestMessage.Data;
+
+                            if (ce.dataType == "string")
+                            {
+
+                                List<byte> bytes = new List<byte>();
+                                for (int i = 0; i < data.Length; i++)
+                                {
+                                    if (data[i] != 0)       // clean empty bytes from 16-bit registers
+                                        bytes.Add(data[i]);
+                                }
+                                string value = Encoding.UTF8.GetString(bytes.ToArray());
+                                foreach (Device dev in juju[ce])
+                                {
+                                    if (dev.checkEntry.expectedValue == value)
+                                    {
+                                        Console.WriteLine("It's a match!");
+                                        device = dev;
+                                        break;
+                                    }
+                                }
+                            }
+                            else if (ce.dataType == "bool")
+                            {
+                                // why would you even do that lmao
+                                return;
+                            }
+                            else if (ce.dataType == "uint16" || ce.dataType == "uint32")
+                            {
+                                byte[] _data = data;
+                                Array.Reverse(_data);
+                                if (ce.dataType == "uint16")
+                                {
+                                    ushort value = BitConverter.ToUInt16(_data, 0);
+                                    foreach (Device dev in juju[ce])
+                                    {
+                                        short expValue;
+                                        if (Int16.TryParse(dev.checkEntry.expectedValue, out expValue) && expValue == value)
+                                        {
+                                            device = dev;
+                                            break;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    int value = BitConverter.ToInt32(_data, 0);
+                                    foreach (Device dev in juju[ce])
+                                    {
+                                        int expValue;
+                                        if (Int32.TryParse(dev.checkEntry.expectedValue, out expValue) && expValue == value)
+                                        {
+                                            device = dev;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!(device is null)) // found the correct device, abort loop
+                            break;
+                    }
+                    if (device is /* still */ null)
+                    {
+                        MessageBox.Show("Ни один из файлов конфигурации не подходит для устройства.");
+                        return;
+                    }
+
+                    progressBar1.Invoke(new MethodInvoker(delegate { progressBar1.Value = 100; }));
+                }
+            });
+            if (device != null)
+            {
                 try
                 {
                     AddLog("Попытка подключиться к устройству " + device.name);
-                    datasheet = new Datasheet((byte)UpDown_ModbusID.Value, CBox_BaudRate.SelectedIndex);
+                    datasheet = new Datasheet(CBox_BaudRate.SelectedIndex);
                     datasheet.Show();
                 }
                 catch (Exception err) { MessageBox.Show(err.Message); }
-
-                progressBar1.Value = 100;
             }
-
         }
 
         void CBox_Ports_Click(object sender, EventArgs e)
@@ -497,7 +491,8 @@ namespace Gidrolock_Modbus_Scanner
 
                 }
                 string msg = Modbus.ByteArrayToString(_msg);
-            } catch (Exception err) { MessageBox.Show(err.Message, "Setting Register Error"); }
+            }
+            catch (Exception err) { MessageBox.Show(err.Message, "Setting Register Error"); }
         }
 
         private void OnSelectedFunctionChanged(object sender, EventArgs e)
@@ -697,7 +692,7 @@ namespace Gidrolock_Modbus_Scanner
             dateTime = DateTime.Now;
             TextBox_Log.Invoke((MethodInvoker)delegate { TextBox_Log.AppendText(Environment.NewLine + "[" + dateTime.Hour.ToString().PadLeft(2, '0') + ":" + dateTime.Minute.ToString().PadLeft(2, '0') + ":" + dateTime.Second.ToString().PadLeft(2, '0') + "] " + message); });
         }
-        
+
         #region Parsers
         public static bool IsHex(string str)
         {
@@ -762,8 +757,19 @@ namespace Gidrolock_Modbus_Scanner
             return result;
         }
         #endregion
+
     }
 }
 
-public enum FunctionCode { ReadCoil = 1, ReadDiscrete = 2, ReadHolding = 3, ReadInput = 4, WriteCoil = 5, WriteRegister = 6, WriteMultCoils = 15, WriteMultRegisters = 16 };
+public class LogEventArgs : EventArgs
+{
+    public string Message { get; set; }
+    public LogEventArgs(string message)
+    {
+        Message = message;
+    }
+}
+
+public enum FunctionCode
+{ ReadCoil = 1, ReadDiscrete = 2, ReadHolding = 3, ReadInput = 4, WriteCoil = 5, WriteRegister = 6, WriteMultCoils = 15, WriteMultRegisters = 16 };
 public enum SelectedPath { File, Folder };

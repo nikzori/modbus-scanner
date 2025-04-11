@@ -17,27 +17,30 @@ namespace Gidrolock_Modbus_Scanner
         public Entry idEntry;
         public Entry speedEntry;
 
-        public Device(string name, string description, CheckEntry checkEntry, List<Entry> entries)
+        public Device(string name, string description, CheckEntry checkEntry, Entry idEntry, Entry speedEntry, List<Entry> entries)
         {
             this.name = name;  
             this.description = description; 
             this.checkEntry = checkEntry;
+            this.idEntry = idEntry;
+            this.speedEntry = speedEntry;
             this.entries = entries;
         }
     }
-    public struct Entry
+    public class Entry
     {
         public string name;
         public RegisterType registerType;
         public ushort address;
-        public ushort length;
-        public string dataType;
+        public ushort length = 1;
+        public string dataType = "uint16";
         public List<string> labels;
         public Dictionary<string, string> valueParse;
         public bool readOnce;
 
-        public Entry(string name, RegisterType registerType, ushort address, ushort length = 1, string dataType = "uint16", List<string> labels = null, Dictionary<string, string> valueParse = null, bool readOnce = false, bool isModbusID = false)
+        public Entry(string name, RegisterType registerType, ushort address, ushort length = 1, string dataType = "uint16", List<string> labels = null, Dictionary<string, string> valueParse = null, bool readOnce = false)
         {
+            
             this.name = name;
             this.registerType = registerType;   
             this.address = address;
