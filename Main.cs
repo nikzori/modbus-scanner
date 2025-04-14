@@ -400,10 +400,11 @@ namespace Gidrolock_Modbus_Scanner
             try
             {
                 int functionCode = CBox_Function.SelectedIndex + 1;
-                Console.WriteLine("Set fCode: " + functionCode);
+                
                 short address;
                 ushort length = (ushort)UpDown_RegLength.Value;
                 byte[] _msg = new byte[8];
+
                 if (Int16.TryParse(TBox_RegAddress.Text, out address))
                 {
                     if (functionCode <= 4)
@@ -419,7 +420,6 @@ namespace Gidrolock_Modbus_Scanner
                             switch ((FunctionCode)functionCode)
                             {
                                 case (FunctionCode.WriteCoil):
-                                    Console.WriteLine("Trying to force single coil");
                                     if (valueLower == "true" || valueLower == "1")
                                         value = 0xFF_00;
                                     else if (valueLower != "true" || valueLower != "1" || valueLower != "false" || valueLower != "0")
@@ -541,8 +541,10 @@ namespace Gidrolock_Modbus_Scanner
                 latestMessage = null;
                 isAwaitingResponse = true;
                 int attempts = 0;
+                byte[] _msg;
 
-                Modbus.Read(Modbus.slaveID, functionCode, address, length);
+                Modbus.Read(Modbus.slaveID, functionCode, address, length, out _msg);
+                AddLog("Отправка сообщения: " + Modbus.ByteArrayToString(_msg));
                 stopwatch.Restart();
 
                 while (isAwaitingResponse && latestMessage is null)
@@ -586,7 +588,7 @@ namespace Gidrolock_Modbus_Scanner
                 int attempts = 0;
                 byte[] _msg;
                 Modbus.WriteSingle(functionCode, address, value, out _msg);
-                AddLog("Отправка сообщения: " + _msg);
+                AddLog("Отправка сообщения: " + Modbus.ByteArrayToString(_msg));
                 stopwatch.Restart();
 
                 while (isAwaitingResponse && latestMessage is null)

@@ -408,9 +408,9 @@ namespace Gidrolock_Modbus_Scanner
         public Entry entry;
 
         public Control checkbox;
-        public Label numberLabel = new Label() { Height = 25, Width = 30, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 1, 0, 0) };
+        public Label numberLabel = new Label() { Height = 20, Width = 30, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 6, 0, 0) };
         public Label addressLabel = new Label() { Height = 25, Width = 60, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 1, 0, 0) };
-        public Label nameLabel = new Label() { Height = 25, Width = 220, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 1, 0, 0) };
+        public Label nameLabel = new Label() { Height = 25, Width = 230, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 1, 0, 0) };
         public Control valueControl = null;
         public Button valueButton = null;
 
@@ -551,7 +551,7 @@ namespace Gidrolock_Modbus_Scanner
             }
             else if (entry.registerType == RegisterType.Coil)
             {
-                valueControl = new Label() { Height = 25, Width = 120, Margin = new Padding(0, 5, 0, 0), Text = "n/a" };
+                valueControl = new Label() { Height = 25, Width = 120, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 5, 0, 0), Text = "n/a" };
                 valueButton = new Button() { Height = 25, Width = 120, Margin = Padding.Empty, Text = "Переключить" };
                 valueButton.Click += async delegate
                 {

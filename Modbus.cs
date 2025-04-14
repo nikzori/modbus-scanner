@@ -107,6 +107,49 @@ namespace Gidrolock_Modbus_Scanner
             }
 
         }
+
+        public static bool Read(byte slaveID, FunctionCode functionCode, ushort address, ushort length, out byte[] msg)
+        {
+            //Ensure port is open:
+            if (port.IsOpen)
+            {
+                //Clear in/out buffers:
+                port.DiscardOutBuffer();
+                port.DiscardInBuffer();
+
+                //Read functions are always 8 bytes long
+                byte[] message = new byte[8];
+
+                //Build outgoing modbus message:
+                BuildReadMessage(slaveID, (byte)functionCode, address, length, ref message);
+                msg = message;
+                Console.WriteLine("Outgoing message: " + ByteArrayToString(message));
+                if (message.Length > 1)
+                {
+                    //Send modbus message to Serial Port:
+                    try
+                    {
+                        port.Write(message, 0, message.Length);
+                        Console.WriteLine("Message sent");
+                        return true;
+                    }
+                    catch (Exception err)
+                    {
+                        MessageBox.Show(err.Message, "aeiou");
+                        port.Close();
+                        return false;
+                    }
+                }
+                else return false;
+            }
+            else
+            {
+                MessageBox.Show("Порт не открыт");
+                msg = null;
+                return false;
+            }
+
+        }
         #endregion
 
         #region Write Single Coil/Register
