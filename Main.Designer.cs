@@ -520,7 +520,7 @@
             this.MaximizeBox = false;
             this.Name = "App";
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
-            this.Text = "Gidrolock Modbus Scanner";
+            this.Text = "Zori\'s Modbus Scanner";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.App_FormClosed);
             this.Load += new System.EventHandler(this.Form1_Load);
             this.groupBox2.ResumeLayout(false);

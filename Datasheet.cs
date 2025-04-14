@@ -118,7 +118,7 @@ namespace Gidrolock_Modbus_Scanner
                 return;
             }
             Task.Run(() => PollAll());
-            
+
         }
 
         public void PollAll()
@@ -408,9 +408,9 @@ namespace Gidrolock_Modbus_Scanner
         public Entry entry;
 
         public Control checkbox;
-        public Label numberLabel = new Label() { Height = 25, Width = 30, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
-        public Label addressLabel = new Label() { Height = 25, Width = 60, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
-        public Label nameLabel = new Label() { Height = 25, Width = 220, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty };
+        public Label numberLabel = new Label() { Height = 25, Width = 30, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 1, 0, 0) };
+        public Label addressLabel = new Label() { Height = 25, Width = 60, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 1, 0, 0) };
+        public Label nameLabel = new Label() { Height = 25, Width = 220, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 1, 0, 0) };
         public Control valueControl = null;
         public Button valueButton = null;
 
@@ -421,7 +421,7 @@ namespace Gidrolock_Modbus_Scanner
 
             if (valueControl is null)
                 return;
-            
+
             switch (dataType)
             {
                 case "uint16":
@@ -468,7 +468,7 @@ namespace Gidrolock_Modbus_Scanner
 
             if (hasCheckbox)
             {
-                checkbox = new CheckBox() { Width = 25, Height = 20, Margin = Padding.Empty };
+                checkbox = new CheckBox() { Width = 25, Height = 20, Margin = new Padding(0, 3, 0, 0) };
                 (checkbox as CheckBox).Checked = true;
             }
             else checkbox = new Label() { Width = 25, Height = 20, Margin = Padding.Empty };
@@ -485,7 +485,7 @@ namespace Gidrolock_Modbus_Scanner
 
             if (entry.registerType == RegisterType.Holding)
             {
-                valueControl = new TextBox() { Height = 25, Width = 120, Margin = Padding.Empty };
+                valueControl = new TextBox() { Height = 26, Width = 120, Margin = new Padding(0, 2, 0, 0) };
                 valueButton = new Button() { Height = 25, Width = 120, Margin = Padding.Empty, Text = "Задать" };
                 ushort address = entry.address;
                 valueButton.Click += async delegate
@@ -551,7 +551,7 @@ namespace Gidrolock_Modbus_Scanner
             }
             else if (entry.registerType == RegisterType.Coil)
             {
-                valueControl = new Label() { Height = 25, Width = 120, Margin = Padding.Empty, Text = "n/a" };
+                valueControl = new Label() { Height = 25, Width = 120, Margin = new Padding(0, 5, 0, 0), Text = "n/a" };
                 valueButton = new Button() { Height = 25, Width = 120, Margin = Padding.Empty, Text = "Переключить" };
                 valueButton.Click += async delegate
                 {
@@ -577,7 +577,7 @@ namespace Gidrolock_Modbus_Scanner
                     });
                 };
             }
-            else valueControl = new Label() { Height = 25, Width = 120, TextAlign = ContentAlignment.MiddleLeft, Margin = Padding.Empty, Text = "n/a" };
+            else valueControl = new Label() { Height = 25, Width = 120, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 1, 0, 0), Text = "n/a" };
 
             valueControl.Parent = this;
 
