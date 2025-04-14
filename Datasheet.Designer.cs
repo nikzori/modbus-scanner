@@ -36,7 +36,7 @@
             this.Button_StartStop = new System.Windows.Forms.Button();
             this.flowLayoutPanel1 = new System.Windows.Forms.FlowLayoutPanel();
             this.label1 = new System.Windows.Forms.Label();
-            this.button1 = new System.Windows.Forms.Button();
+            this.buttonSinglePoll = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
             this.cbBaudrate = new System.Windows.Forms.ComboBox();
             this.udSlaveId = new System.Windows.Forms.NumericUpDown();
@@ -115,15 +115,16 @@
             this.label1.TabIndex = 9;
             this.label1.Text = "Скорость, бит/с:";
             // 
-            // button1
+            // buttonSinglePoll
             // 
-            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.button1.Location = new System.Drawing.Point(577, 42);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(75, 23);
-            this.button1.TabIndex = 10;
-            this.button1.Text = "Опрос";
-            this.button1.UseVisualStyleBackColor = true;
+            this.buttonSinglePoll.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.buttonSinglePoll.Location = new System.Drawing.Point(577, 42);
+            this.buttonSinglePoll.Name = "buttonSinglePoll";
+            this.buttonSinglePoll.Size = new System.Drawing.Size(75, 23);
+            this.buttonSinglePoll.TabIndex = 10;
+            this.buttonSinglePoll.Text = "Опрос";
+            this.buttonSinglePoll.UseVisualStyleBackColor = true;
+            this.buttonSinglePoll.Click += new System.EventHandler(this.buttonSinglePoll_Click);
             // 
             // label2
             // 
@@ -179,7 +180,7 @@
             this.Controls.Add(this.udSlaveId);
             this.Controls.Add(this.cbBaudrate);
             this.Controls.Add(this.label2);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.buttonSinglePoll);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.flowLayoutPanel1);
             this.Controls.Add(this.Button_StartStop);
@@ -187,10 +188,12 @@
             this.Controls.Add(this.Label_DeviceName);
             this.Controls.Add(this.Label_DescriptionLabel);
             this.Controls.Add(this.Label_DeviceNameLabel);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.Name = "Datasheet";
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Datasheet";
             ((System.ComponentModel.ISupportInitialize)(this.udSlaveId)).EndInit();
             this.ResumeLayout(false);
@@ -206,7 +209,7 @@
         private System.Windows.Forms.Button Button_StartStop;
         private System.Windows.Forms.FlowLayoutPanel flowLayoutPanel1;
         private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.Button buttonSinglePoll;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.ComboBox cbBaudrate;
         private System.Windows.Forms.NumericUpDown udSlaveId;

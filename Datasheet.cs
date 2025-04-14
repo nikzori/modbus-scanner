@@ -63,7 +63,7 @@ namespace Gidrolock_Modbus_Scanner
                 {
                     if ((e.length == 2 && e.dataType == "uint32") || e.dataType == "string") // this is a single multi-register entry
                     {
-                        entryRows.Add(new EntryRow(rowCount, e, e.name) { Width = flowLayoutPanel1.Width - 25, Height = 25, Margin = Padding.Empty });
+                        entryRows.Add(new EntryRow(rowCount, e, e.name) { Width = flowLayoutPanel1.Width - 17, Height = 25, Margin = Padding.Empty });
                         rowCount++;
                     }
                     else // this is a collection of registers
@@ -71,8 +71,8 @@ namespace Gidrolock_Modbus_Scanner
                         for (int i = 0; i < e.length; i++)
                         {
                             if (i < e.labels.Count)
-                                entryRows.Add(new EntryRow(rowCount, e, e.name + ": " + e.labels[i], (i == 0 ? true : false)) { Width = flowLayoutPanel1.Width - 25, Height = 25, Margin = Padding.Empty });
-                            else entryRows.Add(new EntryRow(rowCount, e, (e.address + i).ToString(), (i == 0 ? true : false)) { Width = flowLayoutPanel1.Width - 25, Height = 25, Margin = Padding.Empty });
+                                entryRows.Add(new EntryRow(rowCount, e, e.name + ": " + e.labels[i], (i == 0 ? true : false)) { Width = flowLayoutPanel1.Width - 17, Height = 25, Margin = Padding.Empty });
+                            else entryRows.Add(new EntryRow(rowCount, e, (e.address + i).ToString(), (i == 0 ? true : false)) { Width = flowLayoutPanel1.Width - 17, Height = 25, Margin = Padding.Empty });
 
                             rowCount++;
                         }
@@ -81,7 +81,7 @@ namespace Gidrolock_Modbus_Scanner
                 }
                 else
                 {
-                    entryRows.Add(new EntryRow(rowCount, e, e.name) { Width = flowLayoutPanel1.Width - 25, Height = 25, Margin = Padding.Empty });
+                    entryRows.Add(new EntryRow(rowCount, e, e.name) { Width = flowLayoutPanel1.Width - 17, Height = 25, Margin = Padding.Empty });
                     rowCount++;
                 }
             }
@@ -105,36 +105,56 @@ namespace Gidrolock_Modbus_Scanner
             {
                 if (isPolling)
                 {
-                    //Console.WriteLine("Poll tick");
-                    if (activeEntryIndex >= device.entries.Count)
-                    {
-                        Console.WriteLine("activeEntryIndex is too big, resetting");
-                        activeEntryIndex = 0;
-                        activeRowIndex = 0;
-                    }
-                    if (activeRowIndex >= entryRows.Count)
-                    {
-                        Console.WriteLine("activeRowIndex is too big, resetting");
-                        activeEntryIndex = 0;
-                        activeRowIndex = 0;
-                    }
-                    Console.WriteLine("Polling for entry index " + activeEntryIndex + "; row index " + activeRowIndex);
-                    if (entryRows[activeRowIndex].checkbox is CheckBox)
-                    {
-                        
-                        if ((entryRows[activeRowIndex].checkbox as CheckBox).Checked)
-                        {
-                            Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
-                            Entry entry = entries[activeEntryIndex];
-                            PollForEntry(entry);
-                            if (entries[activeEntryIndex].readOnce)
-                                entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { (entryRows[activeRowIndex].checkbox as CheckBox).Checked = false; }));
-                        }
-                    }
+                    PollAll();
+                }
+            }
+        }
 
-                    activeEntryIndex++;
-                    activeRowIndex++;
-                    Console.WriteLine("Next entry index: " + activeEntryIndex + "; next row index: " + activeRowIndex);
+        private void buttonSinglePoll_Click(object sender, EventArgs e)
+        {
+            if (isPolling)
+            {
+                MessageBox.Show("Остановите автоопрос для разового опроса.");
+                return;
+            }
+            Task.Run(() => PollAll());
+            
+        }
+
+        public void PollAll()
+        {
+            activeEntryIndex = 0;
+            activeRowIndex = 0;
+            while (true)
+            {
+                Console.WriteLine("Polling for entry index " + activeEntryIndex + "; row index " + activeRowIndex);
+                if (entryRows[activeRowIndex].checkbox is CheckBox)
+                {
+
+                    if ((entryRows[activeRowIndex].checkbox as CheckBox).Checked)
+                    {
+                        //Console.WriteLine("Polling for " + device.entries[activeEntryIndex].name);
+                        Entry entry = entries[activeEntryIndex];
+                        PollForEntry(entry);
+                        if (entries[activeEntryIndex].readOnce)
+                            entryRows[activeRowIndex].Invoke(new MethodInvoker(delegate { (entryRows[activeRowIndex].checkbox as CheckBox).Checked = false; }));
+                    }
+                }
+
+                activeEntryIndex++;
+                activeRowIndex++;
+
+                if (activeEntryIndex >= device.entries.Count)
+                {
+                    activeEntryIndex = 0;
+                    activeRowIndex = 0;
+                    break;
+                }
+                if (activeRowIndex >= entryRows.Count)
+                {
+                    activeEntryIndex = 0;
+                    activeRowIndex = 0;
+                    break;
                 }
             }
         }
@@ -379,6 +399,7 @@ namespace Gidrolock_Modbus_Scanner
                 isPolling = _isPolling;
             });
         }
+
     }
     public class EntryRow : FlowLayoutPanel
     {
