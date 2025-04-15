@@ -1,6 +1,6 @@
-# Zori's Modbus Scanner
+# Zori's Modbus Tools
 
-[RU](https://github.com/nikzori/modbus-scanner) | EN
+[RU](README.md) | EN
 
 A Modbus scanner with both simple functionality and advanced features. Works for any device connected via Modbus RTU. 
 Comes with config files for Gidrolock devices.
@@ -41,12 +41,10 @@ Config fields and possible values:
 			"address": 128,
 
 			// number of polled registers
-			// default value: 1
 			"length": 1,
 
 			// data type for parsing
 			// supported data types: bool, uint16, uint32, string
-			// default value: uint16
 			"dataType": "uint16",
 
 			// whether the entry should be polled again

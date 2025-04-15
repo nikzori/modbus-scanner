@@ -1,12 +1,6 @@
 ﻿using System;
 using System.IO.Ports;
-using System.Runtime.Remoting.Messaging;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Collections.Generic;
-using static System.Net.Mime.MediaTypeNames;
 using System.Diagnostics;
 
 namespace Modbus_Tools

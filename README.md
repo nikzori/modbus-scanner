@@ -1,4 +1,4 @@
-# Zori's Modbus Scanner
+# Zori's Modbus Tools
 
 RU | [EN](README_en.md)
 

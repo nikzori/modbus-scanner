@@ -93,7 +93,7 @@
             // 
             // Button_Connect
             // 
-            this.Button_Connect.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.Button_Connect.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.Button_Connect.Location = new System.Drawing.Point(388, 69);
             this.Button_Connect.Name = "Button_Connect";
@@ -251,7 +251,7 @@
             // 
             // Button_LoadConfig
             // 
-            this.Button_LoadConfig.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.Button_LoadConfig.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.Button_LoadConfig.Location = new System.Drawing.Point(89, 69);
             this.Button_LoadConfig.Name = "Button_LoadConfig";
@@ -293,7 +293,7 @@
             // 
             // button1
             // 
-            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.button1.Location = new System.Drawing.Point(6, 69);
             this.button1.Name = "button1";
@@ -520,7 +520,7 @@
             this.MaximizeBox = false;
             this.Name = "App";
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Hide;
-            this.Text = "Zori\'s Modbus Scanner";
+            this.Text = "Zori\'s Modbus Tools";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.App_FormClosed);
             this.Load += new System.EventHandler(this.Form1_Load);
             this.groupBox2.ResumeLayout(false);
