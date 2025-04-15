@@ -12,7 +12,7 @@ using System.Windows.Forms;
 using System.Xml;
 
 
-namespace Gidrolock_Modbus_Scanner
+namespace Modbus_Tools
 {
     public partial class Datasheet : Form
     {

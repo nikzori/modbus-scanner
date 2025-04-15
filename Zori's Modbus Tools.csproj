@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{47A399D3-30C1-4EF4-9E94-F3518919A59C}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>Modbus_Scanner</RootNamespace>
-    <AssemblyName>Zori%27s Modbus Scanner</AssemblyName>
+    <RootNamespace>Modbus_Tools</RootNamespace>
+    <AssemblyName>Zori%27s Modbus Tools</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

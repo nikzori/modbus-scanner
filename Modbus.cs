@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using static System.Net.Mime.MediaTypeNames;
 using System.Diagnostics;
 
-namespace Gidrolock_Modbus_Scanner
+namespace Modbus_Tools
 {
     public static class Modbus
     {

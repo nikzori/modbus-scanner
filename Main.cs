@@ -15,7 +15,7 @@ using System.Threading;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Gidrolock_Modbus_Scanner
+namespace Modbus_Tools
 {
     public partial class App : Form
     {
