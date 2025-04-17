@@ -74,12 +74,10 @@
             // 
             // Label_Description
             // 
-            this.Label_Description.AutoSize = true;
             this.Label_Description.Location = new System.Drawing.Point(74, 42);
             this.Label_Description.Name = "Label_Description";
-            this.Label_Description.Size = new System.Drawing.Size(35, 13);
+            this.Label_Description.Size = new System.Drawing.Size(497, 35);
             this.Label_Description.TabIndex = 4;
-            this.Label_Description.Text = "label4";
             // 
             // Button_StartStop
             // 
