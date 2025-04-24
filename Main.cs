@@ -418,7 +418,7 @@ namespace Modbus_Tools
                                     if (valueLower == "true" || valueLower == "1")
                                         value = 0xFF_00;
                                     else if (valueLower == "false" || valueLower == "0")
-                                        value = 0xFF_00;
+                                        value = 0x00_00;
                                     else 
                                     { 
                                         MessageBox.Show("Неподходящие значения для регистра типа Coil");
