@@ -408,6 +408,7 @@ namespace Modbus_Tools
                     else
                     {
                         string valueLower = TBox_RegValue.Text.ToLower();
+                        Console.WriteLine("valueLower: " + valueLower);
                         ushort value = 0x00_00;
                         await Task.Run(() =>
                         {
@@ -416,8 +417,10 @@ namespace Modbus_Tools
                                 case (FunctionCode.WriteCoil):
                                     if (valueLower == "true" || valueLower == "1")
                                         value = 0xFF_00;
-                                    else if (valueLower != "true" || valueLower != "1" || valueLower != "false" || valueLower != "0")
-                                    {
+                                    else if (valueLower == "false" || valueLower == "0")
+                                        value = 0xFF_00;
+                                    else 
+                                    { 
                                         MessageBox.Show("Неподходящие значения для регистра типа Coil");
                                         return;
                                     }

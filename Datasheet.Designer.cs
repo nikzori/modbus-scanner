@@ -65,10 +65,9 @@
             // 
             // Label_DeviceName
             // 
-            this.Label_DeviceName.AutoSize = true;
             this.Label_DeviceName.Location = new System.Drawing.Point(104, 18);
             this.Label_DeviceName.Name = "Label_DeviceName";
-            this.Label_DeviceName.Size = new System.Drawing.Size(35, 13);
+            this.Label_DeviceName.Size = new System.Drawing.Size(467, 13);
             this.Label_DeviceName.TabIndex = 3;
             this.Label_DeviceName.Text = "label3";
             // 
